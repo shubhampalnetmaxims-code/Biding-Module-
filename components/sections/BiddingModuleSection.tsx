@@ -4,6 +4,8 @@ import { BiddingContext } from '../../context/BiddingContext';
 import { Booth } from '../BoothManagement';
 import { ChangeBoothInfoModal } from '../ChangeBoothInfoModal';
 import { ErrorModal } from '../ErrorModal';
+import { useToast } from '../../context/ToastContext';
+import { ConfirmationModal } from '../ConfirmationModal';
 
 interface BiddingModuleSectionProps {
     vendorName: string;
@@ -11,7 +13,7 @@ interface BiddingModuleSectionProps {
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
-  const ref = useRef<T>();
+  const ref = useRef<T | undefined>(undefined);
   useEffect(() => {
     ref.current = value;
   }, [value]);
@@ -19,7 +21,7 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 
-const RadioButton = ({ id, name, value, label, checked, onChange }) => (
+const RadioButton: React.FC<{ id: string, name: string, value: string, label: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }> = ({ id, name, value, label, checked, onChange }) => (
     <div className="flex items-center">
         <input 
             id={id} 
@@ -36,6 +38,7 @@ const RadioButton = ({ id, name, value, label, checked, onChange }) => (
 
 export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName }) => {
   const { booths, placeBid, userBids, submitPayment } = useContext(BiddingContext);
+  const { addToast } = useToast();
   
   const [isTentSelected, setIsTentSelected] = useState(true);
   const [boothCount, setBoothCount] = useState('one');
@@ -45,11 +48,11 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
   const [bidError, setBidError] = useState<string | null>(null);
   const [highlightedBooths, setHighlightedBooths] = useState<Set<number>>(new Set());
   const prevBooths = usePrevious(booths);
+  const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   useEffect(() => {
     if (!prevBooths) return;
 
-    // FIX: Explicitly type `prevBoothsMap` to solve type inference issue where `prevBooth` would become `unknown`.
     const prevBoothsMap: Map<number, Booth> = new Map(prevBooths.map((b: Booth) => [b.id, b]));
     const updatedIds = new Set<number>();
 
@@ -68,7 +71,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         const timer = setTimeout(() => {
             setHighlightedBooths(new Set());
         }, 1500);
-        return () => clearTimeout(timer); // Cleanup timer on component unmount or if effect re-runs
+        return () => clearTimeout(timer);
     }
   }, [booths, prevBooths]);
 
@@ -88,7 +91,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
 
     const result = placeBid(vendorName, booth.id, bidValue, numCircuits);
     if (result.success) {
-      alert(result.message);
+      addToast(result.message, 'success');
       handleBidChange(booth.id, '');
     } else {
       setBidError(result.message);
@@ -96,17 +99,29 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
   };
   
   const handleBuyOut = (booth: Booth) => {
-    if (window.confirm(`Are you sure you want to buy out ${booth.name} for $${booth.buyOutPrice.toFixed(2)}?`)) {
-       alert(`Congratulations! You have purchased ${booth.name}.`);
-       // This would also be a context function in a real app
-    }
+    setConfirmModalState({
+        isOpen: true,
+        title: 'Confirm Buy Out',
+        message: `Are you sure you want to buy out ${booth.name} for $${booth.buyOutPrice.toFixed(2)}? This action is final.`,
+        onConfirm: () => {
+            addToast(`Congratulations! You have purchased ${booth.name}.`, 'success');
+            // This would also be a context function in a real app to handle the state change
+            setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+        }
+    });
   };
 
   const handleSubmitPayment = (boothId: number) => {
-    if(window.confirm("Have you completed the payment for this booth? This will notify the admin to verify your payment.")) {
-        submitPayment(boothId);
-        alert("Payment submitted successfully! The admin will verify your payment shortly.");
-    }
+    setConfirmModalState({
+        isOpen: true,
+        title: 'Confirm Payment Submission',
+        message: 'Have you completed the payment for this booth? This will notify the admin to verify your payment.',
+        onConfirm: () => {
+            submitPayment(boothId);
+            addToast("Payment submitted successfully! The admin will verify your payment shortly.", 'success');
+            setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+        }
+    });
   }
 
   const sortedBooths = [...booths].sort((a, b) => {
@@ -364,6 +379,13 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
           isOpen={!!bidError} 
           onClose={() => setBidError(null)} 
           message={bidError} 
+      />
+      <ConfirmationModal
+        isOpen={confirmModalState.isOpen}
+        onClose={() => setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+        onConfirm={confirmModalState.onConfirm}
+        title={confirmModalState.title}
+        message={confirmModalState.message}
       />
     </div>
   );

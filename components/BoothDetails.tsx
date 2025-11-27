@@ -5,6 +5,7 @@ import { ArrowLeftIcon, CheckCircleIcon } from './icons';
 import { BiddingContext } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 import { ConfirmBidModal } from './ConfirmBidModal';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface Bid {
     id: number;
@@ -42,6 +43,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
     const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [bidToConfirm, setBidToConfirm] = useState<Bid | null>(null);
+    const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
     const boothBids = bids[booth.id] || [];
     const sortedBids = [...boothBids].sort((a, b) => b.bidAmount - a.bidAmount);
@@ -64,16 +66,28 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
     };
 
     const handleAdminConfirmPayment = (boothId: number) => {
-        if (window.confirm("Are you sure you want to confirm this payment? This will notify the vendor and cannot be undone.")) {
-            confirmPayment(boothId);
-        }
+        setConfirmModalState({
+            isOpen: true,
+            title: 'Confirm Payment',
+            message: 'Are you sure you want to confirm this payment? This will notify the vendor and cannot be undone.',
+            onConfirm: () => {
+                confirmPayment(boothId);
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            }
+        });
     };
     
     const handleRevoke = (boothId: number) => {
-        if (window.confirm("Are you sure you want to revoke this bid? The booth will become available for bidding again and the vendor will be notified.")) {
-            revokeBid(boothId);
-            onBack(); // Go back to list as this booth's winner status is removed
-        }
+        setConfirmModalState({
+            isOpen: true,
+            title: 'Revoke Bid',
+            message: 'Are you sure you want to revoke this bid? The booth will become available for bidding again and the vendor will be notified.',
+            onConfirm: () => {
+                revokeBid(boothId);
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                onBack();
+            }
+        });
     };
 
     const handleSelectVendor = (bid: Bid) => {
@@ -201,6 +215,13 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                 onConfirm={handleConfirmWinner}
                 booth={booth}
                 bid={bidToConfirm}
+            />
+            <ConfirmationModal
+                isOpen={confirmModalState.isOpen}
+                onClose={() => setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+                onConfirm={confirmModalState.onConfirm}
+                title={confirmModalState.title}
+                message={confirmModalState.message}
             />
         </div>
     );

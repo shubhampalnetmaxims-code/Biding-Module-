@@ -1,4 +1,4 @@
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode, useCallback } from 'react';
 import { Booth } from '../components/BoothManagement';
 
 // --- INITIAL MOCK DATA ---
@@ -18,7 +18,6 @@ interface UserBidDetails {
     circuits: number;
 }
 interface UserBids {
-    // FIX: Using string for boothId index signature as object keys are strings in JS.
     [vendorName: string]: { [boothId: string]: UserBidDetails };
 }
 
@@ -28,26 +27,25 @@ interface Bid extends UserBidDetails {
     timestamp: string;
 }
 interface AllBids {
-    // FIX: Using string for boothId index signature as object keys are strings in JS.
     [boothId: string]: Bid[];
 }
 
 const initialBidsData: AllBids = {
-    1: [
+    '1': [
         { id: 101, vendorName: 'Vendor 1', bidAmount: 550, circuits: 1, timestamp: '2025-06-20T10:00:00Z' },
         { id: 102, vendorName: 'Vendor 2', bidAmount: 600, circuits: 2, timestamp: '2025-06-20T11:30:00Z' },
         { id: 103, vendorName: 'Vendor 1', bidAmount: 650, circuits: 1, timestamp: '2025-06-21T09:00:00Z' },
     ],
-    4: [
+    '4': [
         { id: 401, vendorName: 'Vendor 2', bidAmount: 325, circuits: 0, timestamp: '2025-06-22T14:00:00Z' },
     ],
-    3: [
+    '3': [
         { id: 301, vendorName: 'Vendor 2', bidAmount: 120, circuits: 0, timestamp: '2025-06-24T10:00:00Z' },
     ],
-    5: [
+    '5': [
         { id: 501, vendorName: 'Vendor 2', bidAmount: 750, circuits: 3, timestamp: '2025-06-25T11:00:00Z' },
     ],
-    8: [
+    '8': [
         { id: 801, vendorName: 'Vendor 1', bidAmount: 450, circuits: 1, timestamp: '2025-06-26T10:00:00Z' },
         { id: 802, vendorName: 'Vendor 2', bidAmount: 475, circuits: 1, timestamp: '2025-06-26T12:00:00Z' },
         { id: 803, vendorName: 'Vendor 1', bidAmount: 500, circuits: 1, timestamp: '2025-06-27T14:00:00Z' },
@@ -56,15 +54,15 @@ const initialBidsData: AllBids = {
 
 const initialUserBidsData: UserBids = {
     'Vendor 1': {
-        1: { bidAmount: 650, circuits: 1 },
-        8: { bidAmount: 500, circuits: 1 },
+        '1': { bidAmount: 650, circuits: 1 },
+        '8': { bidAmount: 500, circuits: 1 },
     },
     'Vendor 2': {
-        1: { bidAmount: 600, circuits: 2 },
-        4: { bidAmount: 325, circuits: 0 },
-        3: { bidAmount: 120, circuits: 0 },
-        5: { bidAmount: 750, circuits: 3 },
-        8: { bidAmount: 475, circuits: 1 },
+        '1': { bidAmount: 600, circuits: 2 },
+        '4': { bidAmount: 325, circuits: 0 },
+        '3': { bidAmount: 120, circuits: 0 },
+        '5': { bidAmount: 750, circuits: 3 },
+        '8': { bidAmount: 475, circuits: 1 },
     }
 }
 
@@ -75,9 +73,6 @@ interface Notification {
 interface AllNotifications {
     [vendorName: string]: Notification[];
 }
-
-
-// --- CONTEXT DEFINITION ---
 
 interface BiddingContextType {
     booths: Booth[];
@@ -102,14 +97,14 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [userBids, setUserBids] = useState<UserBids>(initialUserBidsData);
     const [notifications, setNotifications] = useState<AllNotifications>({});
 
-    const addNotification = (vendorName: string, title: string, message: string) => {
+    const addNotification = useCallback((vendorName: string, title: string, message: string) => {
         setNotifications(prev => ({
             ...prev,
             [vendorName]: [...(prev[vendorName] || []), { title, message }]
         }));
-    };
+    }, []);
     
-    const placeBid = (vendorName: string, boothId: number, amount: number, circuits: number) => {
+    const placeBid = useCallback((vendorName: string, boothId: number, amount: number, circuits: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return { success: false, message: "Booth not found." };
         if (booth.status !== 'Open') return { success: false, message: "Bidding for this booth is closed." };
@@ -122,8 +117,6 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const vendorActiveBids = userBids[vendorName] || {};
         const hasAlreadyBid = vendorActiveBids.hasOwnProperty(boothId);
         const openBidsCount = Object.keys(vendorActiveBids).filter(id => {
-            // FIX: The `id` from Object.keys should be a string, but a type inference issue causes it to be treated as `unknown`.
-            // Explicitly casting `id` to a string and adding a radix to parseInt resolves the error and improves robustness.
             const b = booths.find(booth => booth.id === parseInt(id as string, 10));
             return b && b.status === 'Open';
         }).length;
@@ -146,9 +139,9 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, currentBid: amount } : b));
 
         return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.name}!` };
-    };
+    }, [booths, userBids]);
 
-    const confirmBid = (boothId: number, winningBidId: number) => {
+    const confirmBid = useCallback((boothId: number, winningBidId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return;
         
@@ -174,8 +167,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             'Congratulations! You Won a Bid!',
             `Your bid for "${booth.name}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`
         );
-
-        // FIX: Explicitly type losingBidders to resolve an issue where loserName was inferred as 'unknown'.
+        
         const losingBidders: Set<string> = new Set(boothBids
             .filter(b => b.vendorName !== winnerName)
             .map(b => b.vendorName)
@@ -188,15 +180,15 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
                 `The auction for the booth "${booth.name}" has now closed. Thank you for your participation.`
             );
         });
-    };
+    }, [booths, bids, addNotification]);
 
-    const submitPayment = (boothId: number) => {
+    const submitPayment = useCallback((boothId: number) => {
         setBooths(prev => prev.map(b => 
             b.id === boothId ? { ...b, paymentSubmitted: true } : b
         ));
-    };
+    }, []);
 
-    const confirmPayment = (boothId: number) => {
+    const confirmPayment = useCallback((boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if(booth && booth.winner) {
              setBooths(prev => prev.map(b => 
@@ -204,9 +196,9 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             ));
             addNotification(booth.winner, 'Payment Confirmed!', `Your payment for "${booth.name}" has been successfully confirmed by the administrator.`);
         }
-    };
+    }, [booths, addNotification]);
     
-    const revokeBid = (boothId: number) => {
+    const revokeBid = useCallback((boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (booth && booth.winner) {
             const revokedWinner = booth.winner;
@@ -219,20 +211,20 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             }));
             addNotification(revokedWinner, 'Bid Revoked', `Unfortunately, your winning bid for "${booth.name}" has been revoked by the administrator. Please contact them for more details.`);
         }
-    };
+    }, [booths, addNotification]);
 
-    const addBooth = (boothData: Omit<Booth, 'id'>) => {
+    const addBooth = useCallback((boothData: Omit<Booth, 'id'>) => {
         const newBooth: Booth = { ...boothData, id: Date.now() };
         setBooths(prev => [newBooth, ...prev]);
-    };
+    }, []);
 
-    const updateBooth = (boothId: number, updatedBooth: Booth) => {
+    const updateBooth = useCallback((boothId: number, updatedBooth: Booth) => {
         setBooths(prev => prev.map(b => b.id === boothId ? updatedBooth : b));
-    };
+    }, []);
 
-    const deleteBooth = (boothId: number) => {
+    const deleteBooth = useCallback((boothId: number) => {
         setBooths(prev => prev.filter(b => b.id !== boothId));
-    };
+    }, []);
 
 
     return (
