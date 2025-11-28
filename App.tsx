@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header, View } from './components/Header';
 import { AdminView } from './components/AdminView';
 import { VendorView } from './components/VendorView';
@@ -7,16 +7,29 @@ import { ToastProvider } from './context/ToastContext';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('vendor1');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Automatically close the sidebar when the view changes
+    if (view !== 'admin') {
+      setIsSidebarOpen(false);
+    }
+  }, [view]);
 
   return (
     <ToastProvider>
       <BiddingProvider>
         <div className="bg-slate-50 min-h-screen font-sans text-slate-800">
-          <Header activeView={view} setView={setView} />
-          <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+          <Header
+            activeView={view}
+            setView={setView}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+          />
+          <div className={`container mx-auto max-w-7xl ${view !== 'admin' ? 'p-4 sm:p-6 lg:p-8' : ''}`}>
             {view === 'vendor1' && <VendorView vendorName="Vendor 1" key="vendor1" />}
             {view === 'vendor2' && <VendorView vendorName="Vendor 2" key="vendor2" />}
-            {view === 'admin' && <AdminView />}
+            {view === 'admin' && <AdminView isSidebarOpen={isSidebarOpen} />}
           </div>
         </div>
       </BiddingProvider>

@@ -107,7 +107,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                 <h2 className="text-2xl font-bold text-slate-900">Booth Details</h2>
             </div>
 
-            <SectionCard title={booth.name}>
+            <SectionCard title={booth.title}>
                  {booth.status === 'Sold' && (
                      <div className="mb-4 bg-green-100 text-green-800 p-3 rounded-md flex items-center gap-2">
                         <CheckCircleIcon className="w-5 h-5" />
@@ -123,6 +123,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                     <InfoItem label="Base Price" value={`$${booth.basePrice.toFixed(2)}`} />
                     <InfoItem label="Bid Increment" value={`$${booth.increment.toFixed(2)}`} />
                     <InfoItem label="Buy Out Price" value={`$${booth.buyOutPrice.toFixed(2)}`} />
+                    <InfoItem label="Buyout Method" value={booth.buyoutMethod} />
                     <InfoItem label="Bid End Date" value={formatDate(booth.bidEndDate)} />
                     <div className="md:col-span-2">
                         <InfoItem label="Description" value={booth.description} />
@@ -132,6 +133,38 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
 
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Bidding History ({sortedBids.length} bids)</h3>
+                
+                {booth.status === 'Sold' && booth.winner && (
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-bold text-slate-800 mb-2">Winner Information</h4>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                <InfoItem label="Winning Vendor" value={<span className="font-bold text-slate-900">{booth.winner}</span>} />
+                                <InfoItem label="Final Price" value={<span className="font-bold text-slate-900">${booth.currentBid?.toFixed(2)}</span>} />
+                            </div>
+                            <div className="flex items-center justify-end gap-2 flex-shrink-0 w-full sm:w-auto">
+                                {booth.paymentConfirmed ? (
+                                    <>
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircleIcon className="w-5 h-5 text-green-600"/>
+                                            <span className="font-semibold text-green-700">Payment Confirmed</span>
+                                        </div>
+                                        <button onClick={() => handleRevoke(booth.id)} className="bg-red-500 text-white font-semibold px-3 py-1 text-xs rounded-md hover:bg-red-600 transition-colors shadow-sm">
+                                            Revoke
+                                        </button>
+                                    </>
+                                ) : booth.paymentSubmitted ? (
+                                    <button onClick={() => handleAdminConfirmPayment(booth.id)} className="bg-green-500 text-white font-semibold px-3 py-1.5 text-sm rounded-md hover:bg-green-600 transition-colors shadow-sm">
+                                        Confirm Payment
+                                    </button>
+                                ) : (
+                                    <span className="font-semibold text-blue-700">Awaiting Payment</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {sortedBids.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="min-w-full">
@@ -148,11 +181,11 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                                 {sortedBids.map((bid, index) => {
                                     const totalPayable = bid.bidAmount + (bid.circuits * 60);
                                     const isSelected = selectedBid?.id === bid.id;
-                                    const isWinnerRow = booth.winner === bid.vendorName;
+                                    const isWinningBid = booth.winner === bid.vendorName && booth.currentBid === bid.bidAmount;
 
                                     return(
                                         <React.Fragment key={bid.id}>
-                                            <tr className={`border-b border-slate-200 ${isSelected ? 'bg-pink-50' : ''} ${index === 0 && booth.status === 'Open' ? "bg-green-50" : (isWinnerRow ? "bg-blue-50" : "")}`}>
+                                            <tr className={`border-b border-slate-200 ${isSelected ? 'bg-pink-50' : ''} ${isWinningBid ? "bg-blue-50" : (index === 0 && booth.status === 'Open' ? "bg-green-50" : "")}`}>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                                                     <span onClick={() => handleSelectVendor(bid)} className="cursor-pointer hover:underline hover:text-pink-600">
                                                         {bid.vendorName}
@@ -167,24 +200,6 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                                                         <button onClick={() => handleOpenConfirmModal(bid)} className="font-semibold text-pink-600 hover:text-pink-800 transition-colors">
                                                             Confirm Bid
                                                         </button>
-                                                    )}
-                                                    {isWinnerRow && (
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            {booth.paymentConfirmed ? (
-                                                                <>
-                                                                    <span className="font-semibold text-green-700">Payment Confirmed</span>
-                                                                    <button onClick={() => handleRevoke(booth.id)} className="bg-red-500 text-white font-semibold px-2 py-1 text-xs rounded-md hover:bg-red-600 transition-colors shadow-sm">
-                                                                        Revoke
-                                                                    </button>
-                                                                </>
-                                                            ) : booth.paymentSubmitted ? (
-                                                                <button onClick={() => handleAdminConfirmPayment(booth.id)} className="bg-green-500 text-white font-semibold px-3 py-1 text-xs rounded-md hover:bg-green-600 transition-colors shadow-sm">
-                                                                    Confirm Payment
-                                                                </button>
-                                                            ) : (
-                                                                <span className="font-semibold text-blue-700">Winner (Awaiting Payment)</span>
-                                                            )}
-                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>

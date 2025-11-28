@@ -9,6 +9,7 @@ import { DocumentsSection } from './sections/DocumentsSection';
 import { InvoicePaymentSection } from './sections/InvoicePaymentSection';
 import { TermsAndConditionsSection } from './sections/TermsAndConditionsSection';
 import { BiddingModuleSection } from './sections/BiddingModuleSection';
+import { MyBoothsSection } from './sections/MyBoothsSection';
 import { BiddingContext } from '../context/BiddingContext';
 import { InfoIcon, CheckCircleIcon, ClockIcon } from './icons';
 import { Booth } from './BoothManagement';
@@ -22,6 +23,7 @@ const TABS: Tab[] = [
   'Terms and Conditions',
   'Invoice/Payment',
   'Bidding Module',
+  'My Booths',
 ];
 
 interface VendorViewProps {
@@ -29,8 +31,6 @@ interface VendorViewProps {
 }
 
 function usePrevious<T>(value: T): T | undefined {
-    // FIX: Explicitly provide `undefined` as the initial value to `useRef`.
-    // The error "Expected 1 arguments, but got 0" suggests the overload resolution for `useRef` requires an argument in this environment.
     const ref = useRef<T | undefined>(undefined);
     useEffect(() => {
         ref.current = value;
@@ -39,15 +39,8 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 
-const BidStatusCard: React.FC<{booth: Booth, status: 'winning' | 'active' | 'lost', amount: number}> = ({booth, status, amount}) => {
+const BidStatusCard: React.FC<{booth: Booth, status: 'active' | 'lost', amount: number}> = ({booth, status, amount}) => {
     const statusConfig = {
-        winning: {
-            bgColor: 'bg-green-50',
-            borderColor: 'border-green-500',
-            icon: <CheckCircleIcon className="w-5 h-5 text-green-600" />,
-            title: 'You Won!',
-            textColor: 'text-green-800'
-        },
         active: {
             bgColor: 'bg-blue-50',
             borderColor: 'border-blue-500',
@@ -69,13 +62,9 @@ const BidStatusCard: React.FC<{booth: Booth, status: 'winning' | 'active' | 'los
             <div className="flex items-start gap-3">
                 {config.icon}
                 <div>
-                    <p className={`font-bold ${config.textColor}`}>{config.title}: {booth.name}</p>
+                    <p className={`font-bold ${config.textColor}`}>{config.title}: {booth.title} <span className="font-medium">({booth.type})</span></p>
                     <p className={`text-sm ${config.textColor}`}>Your Bid: <span className="font-semibold">${amount.toFixed(2)}</span></p>
-                    {status === 'winning' && (
-                        <div className="mt-2 text-xs text-amber-900 bg-amber-100 p-2 rounded-md border border-amber-200">
-                           <p><strong>Action Required:</strong> Please pay the full amount within 24 hours to secure your spot.</p>
-                        </div>
-                    )}
+                    <p className={`text-sm ${config.textColor} mt-1`}>Buyout method :- <span className="font-semibold">{booth.buyoutMethod}</span></p>
                     {status === 'lost' && <p className="text-sm text-slate-500 mt-1">This booth has been sold to another vendor.</p>}
                 </div>
             </div>
@@ -98,7 +87,6 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
     }
   }, [vendorNotifications, prevNotifications, addToast]);
 
-  const myWinningBids = booths.filter(b => b.status === 'Sold' && b.winner === vendorName);
   const myActiveBids = Object.keys(userBids[vendorName] || {})
     .map(boothId => booths.find(b => b.id === parseInt(boothId)))
     .filter((booth): booth is Booth => booth !== undefined && booth.status === 'Open');
@@ -140,12 +128,9 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-8">
               <h3 className="text-lg font-bold text-slate-900 mb-4">My Bidding Activity</h3>
               <div className="space-y-4">
-                  {myWinningBids.length === 0 && myActiveBids.length === 0 && myLostBids.length === 0 && (
-                      <p className="text-slate-500 text-sm">You haven't placed any bids yet. Go to the 'Bidding Module' to start!</p>
+                  {myActiveBids.length === 0 && myLostBids.length === 0 && (
+                      <p className="text-slate-500 text-sm">You have no active or lost bids. Go to the 'Bidding Module' to start!</p>
                   )}
-                  {myWinningBids.map(booth => (
-                      <BidStatusCard key={booth.id} booth={booth} status="winning" amount={(userBids[vendorName] || {})[booth.id].bidAmount} />
-                  ))}
                   {myActiveBids.map(booth => (
                       <BidStatusCard key={booth.id} booth={booth} status="active" amount={(userBids[vendorName] || {})[booth.id].bidAmount} />
                   ))}
@@ -156,6 +141,7 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
             </div>
           </>
         )}
+         {activeTab === 'My Booths' && <MyBoothsSection vendorName={vendorName} />}
       </div>
     </div>
   );

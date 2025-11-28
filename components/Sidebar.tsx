@@ -1,25 +1,49 @@
 import React from 'react';
-import { BiddingModuleIcon } from './icons';
+import { BiddingModuleIcon, MapIcon } from './icons';
+import { AdminViewType } from './AdminView';
 
-const SidebarLink: React.FC<{ text: string; isActive?: boolean }> = ({ text, isActive }) => (
-    <a 
-        href="#" 
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+interface SidebarLinkProps {
+    text: string;
+    isActive?: boolean;
+    onClick: () => void;
+    icon: React.ReactNode;
+}
+
+const SidebarLink: React.FC<SidebarLinkProps> = ({ text, isActive, onClick, icon }) => (
+    <button
+        onClick={onClick}
+        className={`flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
             isActive 
             ? 'bg-pink-50 text-pink-700' 
             : 'text-slate-600 hover:bg-slate-100'
         }`}
     >
-        <BiddingModuleIcon className="w-5 h-5" />
+        {icon}
         <span>{text}</span>
-    </a>
+    </button>
 )
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+    activeView: AdminViewType;
+    setActiveView: (view: AdminViewType) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
   return (
     <aside className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
       <nav className="flex flex-col gap-1">
-        <SidebarLink text="Bidding Module" isActive={true} />
+        <SidebarLink 
+            text="Booth Management" 
+            isActive={activeView === 'booths'} 
+            onClick={() => setActiveView('booths')}
+            icon={<BiddingModuleIcon className="w-5 h-5" />}
+        />
+        <SidebarLink 
+            text="Location Management" 
+            isActive={activeView === 'locations'} 
+            onClick={() => setActiveView('locations')}
+            icon={<MapIcon className="w-5 h-5" />}
+        />
       </nav>
     </aside>
   );

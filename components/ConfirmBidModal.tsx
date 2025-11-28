@@ -29,7 +29,7 @@ export const ConfirmBidModal: React.FC<ConfirmBidModalProps> = ({ isOpen, onClos
                 </div>
                 <div className="p-6 space-y-4">
                     <p className="text-sm text-slate-600">
-                        Are you sure you want to confirm <span className="font-bold">{bid.vendorName}</span> as the winner for the booth <span className="font-bold">{booth.name}</span>? This action cannot be undone.
+                        Are you sure you want to confirm <span className="font-bold">{bid.vendorName}</span> as the winner for the booth <span className="font-bold">{booth.title}</span>? This action cannot be undone.
                     </p>
                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
                         <InfoItem label="Vendor" value={bid.vendorName} />

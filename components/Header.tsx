@@ -1,10 +1,13 @@
 import React from 'react';
+import { HamburgerMenuIcon } from './icons';
 
 export type View = 'vendor1' | 'vendor2' | 'admin';
 
 interface HeaderProps {
     activeView: View;
     setView: (view: View) => void;
+    isSidebarOpen: boolean;
+    setIsSidebarOpen: (isOpen: boolean) => void;
 }
 
 const NavButton: React.FC<{
@@ -26,12 +29,21 @@ const NavButton: React.FC<{
     );
 };
 
-export const Header: React.FC<HeaderProps> = ({ activeView, setView }) => {
+export const Header: React.FC<HeaderProps> = ({ activeView, setView, isSidebarOpen, setIsSidebarOpen }) => {
   return (
     <header className="bg-slate-800 shadow-md">
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-                 <div className="flex items-center">
+                 <div className="flex items-center gap-4">
+                    {activeView === 'admin' && (
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="text-slate-100 hover:bg-white/20 p-2 rounded-md"
+                            aria-label="Toggle sidebar"
+                        >
+                            <HamburgerMenuIcon className="w-6 h-6" />
+                        </button>
+                    )}
                     <span className="font-bold text-lg text-white">Event Dashboard</span>
                  </div>
                  <div className="flex items-center gap-2">

@@ -7,7 +7,8 @@ export type Tab =
   | 'Documents'
   | 'Terms and Conditions'
   | 'Invoice/Payment'
-  | 'Bidding Module';
+  | 'Bidding Module'
+  | 'My Booths';
 
 interface TabNavigationProps {
   tabs: Tab[];

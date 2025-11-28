@@ -3,15 +3,17 @@ import { Booth } from '../components/BoothManagement';
 
 // --- INITIAL MOCK DATA ---
 const initialBoothsData: Booth[] = [
-    { id: 1, name: 'Food Stall A1', type: 'Food', status: 'Open', location: 'Zone A, Spot 1', basePrice: 500, buyOutPrice: 1000, bidEndDate: '2025-07-01T17:00', description: 'Premium spot near the main stage.', increment: 50, currentBid: 650 },
-    { id: 2, name: 'Craft Corner B3', type: 'Craft', status: 'Closed', location: 'Zone B, Spot 3', basePrice: 250, buyOutPrice: 600, bidEndDate: '2025-06-28T17:00', description: 'Corner booth with high foot traffic.', increment: 25 },
-    { id: 3, name: 'Info Point C2', type: 'Service', status: 'Sold', location: 'Zone C, Spot 2', basePrice: 100, buyOutPrice: 300, bidEndDate: '2025-06-25T17:00', description: 'Central location, ideal for services.', increment: 10, winner: 'Vendor 2', currentBid: 120, paymentSubmitted: true, paymentConfirmed: true },
-    { id: 4, name: 'Artisan Row A2', type: 'Craft', status: 'Open', location: 'Zone A, Spot 2', basePrice: 300, buyOutPrice: 750, bidEndDate: '2025-07-02T18:00', description: 'Excellent visibility on the main walkway.', increment: 25, currentBid: 325 },
-    { id: 5, name: 'Taco Truck Fiesta', type: 'Food', status: 'Open', location: 'Food Court, Spot 5', basePrice: 700, buyOutPrice: 1500, bidEndDate: '2025-07-03T12:00', description: 'Large space suitable for a food truck.', increment: 50, currentBid: 750 },
-    { id: 6, name: 'Handmade Jewelry', type: 'Craft', status: 'Open', location: 'Artisan Row, Spot 8', basePrice: 200, buyOutPrice: 500, bidEndDate: '2025-07-02T19:00', description: 'Small booth perfect for delicate items.', increment: 20 },
-    { id: 7, name: 'Local Charity Info', type: 'Service', status: 'Open', location: 'Community Zone, Spot 1', basePrice: 50, buyOutPrice: 150, bidEndDate: '2025-06-30T17:00', description: 'Discounted rate for non-profits.', increment: 5 },
-    { id: 8, name: 'Gourmet Coffee Cart', type: 'Food', status: 'Sold', location: 'Entrance, Spot 1', basePrice: 400, buyOutPrice: 900, bidEndDate: '2025-06-29T17:00', description: 'High traffic area near the main entrance.', increment: 25, winner: 'Vendor 1', currentBid: 500, paymentSubmitted: false, paymentConfirmed: false },
+    { id: 1, title: 'Food Stall A1', type: '10x20', status: 'Open', location: 'Zone A', basePrice: 500, buyOutPrice: 1000, bidEndDate: '2025-07-01T17:00', description: 'Premium spot near the main stage.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 650 },
+    { id: 2, title: 'Craft Corner B3', type: '10x10', status: 'Closed', location: 'Zone B', basePrice: 250, buyOutPrice: 600, bidEndDate: '2025-06-28T17:00', description: 'Corner booth with high foot traffic.', increment: 25, buyoutMethod: 'Direct pay' },
+    { id: 3, title: 'Info Point C2', type: '10x10', status: 'Sold', location: 'Zone C', basePrice: 100, buyOutPrice: 300, bidEndDate: '2025-06-25T17:00', description: 'Central location, ideal for services.', increment: 10, buyoutMethod: 'Admin approve', winner: 'Vendor 2', currentBid: 120, paymentSubmitted: true, paymentConfirmed: true },
+    { id: 4, title: 'Artisan Row A2', type: '10x10', status: 'Open', location: 'Zone A', basePrice: 300, buyOutPrice: 750, bidEndDate: '2025-07-02T18:00', description: 'Excellent visibility on the main walkway.', increment: 25, buyoutMethod: 'Direct pay', currentBid: 325 },
+    { id: 5, title: 'Taco Truck Fiesta', type: '10x20', status: 'Open', location: 'Food Court', basePrice: 700, buyOutPrice: 1500, bidEndDate: '2025-07-03T12:00', description: 'Large space suitable for a food truck.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 750 },
+    { id: 6, title: 'Handmade Jewelry', type: '10x10', status: 'Open', location: 'Artisan Row', basePrice: 200, buyOutPrice: 500, bidEndDate: '2025-07-02T19:00', description: 'Small booth perfect for delicate items.', increment: 20, buyoutMethod: 'Direct pay' },
+    { id: 7, title: 'Local Charity Info', type: '10x10', status: 'Open', location: 'Community Zone', basePrice: 50, buyOutPrice: 150, bidEndDate: '2025-06-30T17:00', description: 'Discounted rate for non-profits.', increment: 5, buyoutMethod: 'Admin approve' },
+    { id: 8, title: 'Gourmet Coffee Cart', type: '10x10', status: 'Sold', location: 'Entrance', basePrice: 400, buyOutPrice: 900, bidEndDate: '2025-06-29T17:00', description: 'High traffic area near the main entrance.', increment: 25, buyoutMethod: 'Direct pay', winner: 'Vendor 1', currentBid: 500, paymentSubmitted: true, paymentConfirmed: false },
 ];
+
+const initialLocationsData = Array.from(new Set(initialBoothsData.map(b => b.location)));
 
 interface UserBidDetails {
     bidAmount: number;
@@ -79,7 +81,12 @@ interface BiddingContextType {
     bids: AllBids;
     userBids: UserBids;
     notifications: AllNotifications;
+    locations: string[];
+    addLocation: (location: string) => void;
+    deleteLocation: (location: string) => void;
     placeBid: (vendorName: string, boothId: number, amount: number, circuits: number) => { success: boolean, message: string };
+    requestBuyOut: (vendorName: string, boothId: number) => void;
+    directBuyOut: (vendorName: string, boothId: number, circuits: number) => void;
     confirmBid: (boothId: number, winningBidId: number) => void;
     addBooth: (booth: Omit<Booth, 'id'>) => void;
     updateBooth: (boothId: number, updatedBooth: Booth) => void;
@@ -95,7 +102,8 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [booths, setBooths] = useState<Booth[]>(initialBoothsData);
     const [bids, setBids] = useState<AllBids>(initialBidsData);
     const [userBids, setUserBids] = useState<UserBids>(initialUserBidsData);
-    const [notifications, setNotifications] = useState<AllNotifications>({});
+    const [notifications, setNotifications] = useState<AllNotifications>({ 'admin': [] });
+    const [locations, setLocations] = useState<string[]>(initialLocationsData);
 
     const addNotification = useCallback((vendorName: string, title: string, message: string) => {
         setNotifications(prev => ({
@@ -138,8 +146,44 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, currentBid: amount } : b));
 
-        return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.name}!` };
+        return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.title}!` };
     }, [booths, userBids]);
+
+    const requestBuyOut = useCallback((vendorName: string, boothId: number) => {
+        const booth = booths.find(b => b.id === boothId);
+        if (!booth) return;
+        addNotification('admin', 'Buy Out Request', `${vendorName} has requested to buy out "${booth.title}" for $${booth.buyOutPrice.toFixed(2)}.`);
+    }, [booths, addNotification]);
+
+    const directBuyOut = useCallback((vendorName: string, boothId: number, circuits: number) => {
+        const booth = booths.find(b => b.id === boothId);
+        if (!booth || booth.status !== 'Open') return;
+        
+        setBooths(prev => prev.map(b => 
+            b.id === boothId 
+                ? { 
+                    ...b, 
+                    status: 'Sold', 
+                    winner: vendorName, 
+                    currentBid: b.buyOutPrice, 
+                    paymentSubmitted: true, 
+                    paymentConfirmed: true 
+                  }
+                : b
+        ));
+        
+        addNotification(
+            vendorName, 
+            'Purchase Successful!', 
+            `You have successfully purchased "${booth.title}" for $${booth.buyOutPrice.toFixed(2)}. Your payment is confirmed.`
+        );
+        
+        addNotification(
+            'admin', 
+            'Booth Sold (Direct Pay)', 
+            `"${booth.title}" has been sold to ${vendorName} for $${booth.buyOutPrice.toFixed(2)} via direct payment.`
+        );
+    }, [booths, addNotification]);
 
     const confirmBid = useCallback((boothId: number, winningBidId: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -165,7 +209,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         addNotification(
             winnerName,
             'Congratulations! You Won a Bid!',
-            `Your bid for "${booth.name}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`
+            `Your bid for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`
         );
         
         const losingBidders: Set<string> = new Set(boothBids
@@ -177,7 +221,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             addNotification(
                 loserName,
                 'Update on Your Bid',
-                `The auction for the booth "${booth.name}" has now closed. Thank you for your participation.`
+                `The auction for the booth "${booth.title}" has now closed. Thank you for your participation.`
             );
         });
     }, [booths, bids, addNotification]);
@@ -194,7 +238,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
              setBooths(prev => prev.map(b => 
                 b.id === boothId ? { ...b, paymentConfirmed: true } : b
             ));
-            addNotification(booth.winner, 'Payment Confirmed!', `Your payment for "${booth.name}" has been successfully confirmed by the administrator.`);
+            addNotification(booth.winner, 'Payment Confirmed!', `Your payment for "${booth.title}" has been successfully confirmed by the administrator.`);
         }
     }, [booths, addNotification]);
     
@@ -209,7 +253,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
                 }
                 return b;
             }));
-            addNotification(revokedWinner, 'Bid Revoked', `Unfortunately, your winning bid for "${booth.name}" has been revoked by the administrator. Please contact them for more details.`);
+            addNotification(revokedWinner, 'Bid Revoked', `Unfortunately, your winning bid for "${booth.title}" has been revoked by the administrator. Please contact them for more details.`);
         }
     }, [booths, addNotification]);
 
@@ -226,9 +270,21 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         setBooths(prev => prev.filter(b => b.id !== boothId));
     }, []);
 
+    const addLocation = useCallback((location: string) => {
+        if (location && !locations.includes(location)) {
+            setLocations(prev => [...prev, location]);
+        }
+    }, [locations]);
+
+    const deleteLocation = useCallback((locationToDelete: string) => {
+        setLocations(prev => prev.filter(loc => loc !== locationToDelete));
+        // Optional: Also handle what happens to booths with this location
+        setBooths(prev => prev.map(b => b.location === locationToDelete ? { ...b, location: '' } : b));
+    }, []);
+
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, placeBid, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, addLocation, deleteLocation, placeBid, requestBuyOut, directBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
             {children}
         </BiddingContext.Provider>
     );

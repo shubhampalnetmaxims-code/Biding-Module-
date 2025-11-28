@@ -6,6 +6,7 @@ import { ChangeBoothInfoModal } from '../ChangeBoothInfoModal';
 import { ErrorModal } from '../ErrorModal';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmationModal } from '../ConfirmationModal';
+import { PaymentModal } from '../PaymentModal';
 
 interface BiddingModuleSectionProps {
     vendorName: string;
@@ -37,7 +38,7 @@ const RadioButton: React.FC<{ id: string, name: string, value: string, label: st
 );
 
 export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName }) => {
-  const { booths, placeBid, userBids, submitPayment } = useContext(BiddingContext);
+  const { booths, placeBid, userBids, requestBuyOut } = useContext(BiddingContext);
   const { addToast } = useToast();
   
   const [isTentSelected, setIsTentSelected] = useState(true);
@@ -49,6 +50,8 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
   const [highlightedBooths, setHighlightedBooths] = useState<Set<number>>(new Set());
   const prevBooths = usePrevious(booths);
   const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const [paymentModalState, setPaymentModalState] = useState<{isOpen: boolean, booth: Booth | null}>({isOpen: false, booth: null});
+  const [selectedLocation, setSelectedLocation] = useState('All');
 
   useEffect(() => {
     if (!prevBooths) return;
@@ -99,35 +102,43 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
   };
   
   const handleBuyOut = (booth: Booth) => {
-    setConfirmModalState({
-        isOpen: true,
-        title: 'Confirm Buy Out',
-        message: `Are you sure you want to buy out ${booth.name} for $${booth.buyOutPrice.toFixed(2)}? This action is final.`,
-        onConfirm: () => {
-            addToast(`Congratulations! You have purchased ${booth.name}.`, 'success');
-            // This would also be a context function in a real app to handle the state change
-            setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-        }
-    });
-  };
+    const numCircuits = parseInt(additionalCircuits, 10) || 0;
+    const totalPayable = booth.buyOutPrice + (numCircuits * 60);
 
-  const handleSubmitPayment = (boothId: number) => {
-    setConfirmModalState({
-        isOpen: true,
-        title: 'Confirm Payment Submission',
-        message: 'Have you completed the payment for this booth? This will notify the admin to verify your payment.',
-        onConfirm: () => {
-            submitPayment(boothId);
-            addToast("Payment submitted successfully! The admin will verify your payment shortly.", 'success');
-            setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-        }
-    });
-  }
+    if (booth.buyoutMethod === 'Direct pay') {
+        setConfirmModalState({
+            isOpen: true,
+            title: 'Confirm Direct Buy Out',
+            message: `You are about to purchase ${booth.title} for a total of $${totalPayable.toFixed(2)}. Do you want to proceed to payment?`,
+            onConfirm: () => {
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                setPaymentModalState({ isOpen: true, booth: booth });
+            }
+        });
+    } else { // Admin approve
+        setConfirmModalState({
+            isOpen: true,
+            title: 'Request Buy Out',
+            message: `Are you sure you want to request to buy out ${booth.title} for $${booth.buyOutPrice.toFixed(2)}? An admin will review your request.`,
+            onConfirm: () => {
+                requestBuyOut(vendorName, booth.id);
+                addToast('Buy out request sent to admin for approval.', 'success');
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            }
+        });
+    }
+  };
 
   const sortedBooths = [...booths].sort((a, b) => {
     const order: { [key in Booth['status']]: number } = { 'Open': 1, 'Closed': 2, 'Sold': 3 };
     return (order[a.status] || 4) - (order[b.status] || 4);
   });
+  
+  const locations = ['All', ...Array.from(new Set(booths.map(b => b.location)))];
+  
+  const filteredBooths = sortedBooths.filter(booth =>
+    selectedLocation === 'All' || booth.location === selectedLocation
+  );
 
   const vendorBidData = userBids[vendorName] || {};
 
@@ -215,21 +226,40 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                 </div>
             </div>
         </div>
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <h2 className="text-2xl font-bold text-slate-900">Bidding Booths</h2>
+            <div className="w-full sm:w-auto">
+                <label htmlFor="location-filter" className="sr-only">Filter by Location</label>
+                 <select 
+                    id="location-filter" 
+                    value={selectedLocation} 
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    className="w-full sm:w-56 rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
+                >
+                    {locations.map(location => (
+                        <option key={location} value={location}>
+                            {location === 'All' ? 'All Locations' : location}
+                        </option>
+                    ))}
+                </select>
+            </div>
+        </div>
 
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Bidding Booths</h2>
-        {sortedBooths.length > 0 ? (
+        {filteredBooths.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {sortedBooths.map(booth => {
+            {filteredBooths.map(booth => {
               const highestBid = booth.currentBid || booth.basePrice;
               const nextMinBid = highestBid + booth.increment;
               const userBidDetails = vendorBidData[booth.id];
-              const isWinner = booth.winner === vendorName;
 
               return (
                 <div key={booth.id} className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
                   <div className="p-5">
                      <div className="flex justify-between items-start mb-1.5">
-                        <h3 className="text-lg font-bold text-slate-900 pr-2">{booth.name}</h3>
+                        <h3 className="text-lg font-bold text-slate-900 pr-2">
+                            {booth.title} <span className="text-base font-medium text-slate-500">({booth.type})</span>
+                        </h3>
                         <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(booth.status)}`}>
                             {booth.status}
                         </span>
@@ -248,6 +278,10 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Buy Out Price:</span>
                         <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-500">
+                        <span>Buyout method :-</span>
+                        <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
                       </div>
                        <div className="flex justify-between items-center text-slate-500">
                         <div className="flex items-center gap-1.5">
@@ -297,17 +331,15 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                             value={bidInputs[booth.id] || ''}
                             onChange={(e) => handleBidChange(booth.id, e.target.value)}
                             placeholder={`$${nextMinBid.toFixed(2)} or more`}
-                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black disabled:bg-slate-200 disabled:cursor-not-allowed"
+                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
                             step={booth.increment}
                             min={nextMinBid}
-                            disabled={booth.status !== 'Open'}
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <button 
                                 onClick={() => handlePlaceBid(booth)} 
-                                className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed" 
-                                disabled={booth.status !== 'Open'}
+                                className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm" 
                             >
                                 Place Bid
                             </button>
@@ -321,35 +353,9 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                      </>
                     )}
 
-                    {isWinner && (
-                      <div className="space-y-3">
-                        {booth.paymentConfirmed ? (
-                          <button
-                              onClick={() => setIsChangeBoothModalOpen(true)}
-                              className="w-full bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors shadow-sm text-sm"
-                          >
-                            Change Booth
-                          </button>
-                        ) : booth.paymentSubmitted ? (
-                          <button className="w-full bg-amber-500 text-white font-semibold px-4 py-2 rounded-lg cursor-default shadow-sm text-sm" disabled>
-                            Payment Submitted
-                          </button>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-3">
-                              <button
-                                  onClick={() => handleSubmitPayment(booth.id)}
-                                  className="w-full font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm text-sm bg-green-500 text-white hover:bg-green-600"
-                              >
-                                  Payment Done
-                              </button>
-                              <button
-                                  onClick={() => setIsChangeBoothModalOpen(true)}
-                                  className="w-full bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors shadow-sm text-sm"
-                              >
-                                  Change Booth
-                              </button>
-                          </div>
-                        )}
+                    {booth.status === 'Sold' && booth.winner === vendorName && (
+                      <div className="text-center p-2 bg-blue-100 text-blue-800 rounded-md font-semibold">
+                        You won this booth!
                       </div>
                     )}
                   </div>
@@ -360,15 +366,9 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         ) : (
           <div className="text-center py-10 px-6 bg-white rounded-lg border border-slate-200">
             <h3 className="text-lg font-medium text-slate-800">No Booths Found</h3>
-            <p className="text-slate-500 mt-1">There are currently no booths configured for this event. Please check back later.</p>
+            <p className="text-slate-500 mt-1">There are currently no booths in the selected location. Please check back later or select a different location.</p>
           </div>
         )}
-      </div>
-
-      <div className="flex justify-start">
-        <button className="bg-pink-600 text-white font-semibold px-8 py-2.5 rounded-lg hover:bg-pink-700 transition-colors shadow-sm">
-          Save Selections
-        </button>
       </div>
 
       <ChangeBoothInfoModal 
@@ -386,6 +386,13 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         onConfirm={confirmModalState.onConfirm}
         title={confirmModalState.title}
         message={confirmModalState.message}
+      />
+      <PaymentModal
+        isOpen={paymentModalState.isOpen}
+        onClose={() => setPaymentModalState({isOpen: false, booth: null})}
+        booth={paymentModalState.booth}
+        circuits={parseInt(additionalCircuits, 10) || 0}
+        vendorName={vendorName}
       />
     </div>
   );
