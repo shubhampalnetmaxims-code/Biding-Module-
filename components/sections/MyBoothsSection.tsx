@@ -11,6 +11,18 @@ interface MyBoothsSectionProps {
 }
 
 const WonBoothCard: React.FC<{ booth: Booth; onPaymentSubmit: (id: number) => void; onChangeRequest: () => void; }> = ({ booth, onPaymentSubmit, onChangeRequest }) => {
+    const getStatusBadge = () => {
+        if (booth.paymentConfirmed) {
+            return { text: 'Payment Confirmed', className: 'bg-green-100 text-green-800' };
+        }
+        if (booth.paymentSubmitted) {
+            return { text: 'Awaiting Confirmation', className: 'bg-blue-100 text-blue-800' };
+        }
+        return { text: 'Awaiting Payment', className: 'bg-amber-100 text-amber-800' };
+    };
+
+    const statusBadge = getStatusBadge();
+
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
             <div className="p-5">
@@ -18,8 +30,8 @@ const WonBoothCard: React.FC<{ booth: Booth; onPaymentSubmit: (id: number) => vo
                     <h3 className="text-lg font-bold text-slate-900 pr-2">
                         {booth.title} <span className="text-base font-medium text-slate-500">({booth.type})</span>
                     </h3>
-                    <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${booth.paymentConfirmed ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {booth.paymentConfirmed ? 'Payment Confirmed' : 'Awaiting Payment'}
+                    <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadge.className}`}>
+                        {statusBadge.text}
                     </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -50,7 +62,7 @@ const WonBoothCard: React.FC<{ booth: Booth; onPaymentSubmit: (id: number) => vo
                         Change Booth
                     </button>
                 ) : booth.paymentSubmitted ? (
-                    <button className="w-full bg-amber-500 text-white font-semibold px-4 py-2 rounded-lg cursor-default shadow-sm text-sm" disabled>
+                    <button className="w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg cursor-default shadow-sm text-sm" disabled>
                         Payment Submitted
                     </button>
                 ) : (
@@ -81,7 +93,8 @@ export const MyBoothsSection: React.FC<MyBoothsSectionProps> = ({ vendorName }) 
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
     const myWonBooths = booths.filter(b => b.status === 'Sold' && b.winner === vendorName);
-    const awaitingPaymentBooths = myWonBooths.filter(b => !b.paymentConfirmed);
+    const awaitingPaymentBooths = myWonBooths.filter(b => !b.paymentSubmitted && !b.paymentConfirmed);
+    const awaitingConfirmationBooths = myWonBooths.filter(b => b.paymentSubmitted && !b.paymentConfirmed);
     const confirmedBooths = myWonBooths.filter(b => b.paymentConfirmed);
     
     const handleSubmitPayment = (boothId: number) => {
@@ -116,6 +129,27 @@ export const MyBoothsSection: React.FC<MyBoothsSectionProps> = ({ vendorName }) 
                     <div className="text-center py-10 px-6 bg-white rounded-lg border border-slate-200">
                         <h3 className="text-lg font-medium text-slate-800">No Booths Awaiting Payment</h3>
                         <p className="text-slate-500 mt-1">You have no winning bids that are pending payment.</p>
+                    </div>
+                )}
+            </div>
+            
+            <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-4">Awaiting Confirmation ({awaitingConfirmationBooths.length})</h2>
+                {awaitingConfirmationBooths.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {awaitingConfirmationBooths.map(booth => (
+                            <WonBoothCard
+                                key={booth.id}
+                                booth={booth}
+                                onPaymentSubmit={handleSubmitPayment}
+                                onChangeRequest={() => setIsChangeBoothModalOpen(true)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 px-6 bg-white rounded-lg border border-slate-200">
+                        <h3 className="text-lg font-medium text-slate-800">No Booths Awaiting Confirmation</h3>
+                        <p className="text-slate-500 mt-1">Once you submit payment, booths will appear here until the admin confirms it.</p>
                     </div>
                 )}
             </div>

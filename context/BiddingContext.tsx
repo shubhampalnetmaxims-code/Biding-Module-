@@ -113,10 +113,13 @@ interface BiddingContextType {
     locations: string[];
     buyoutRequests: AllBuyoutRequests;
     watchlist: Watchlist;
+    circuitSelections: { [vendorName: string]: number };
+    setCircuitSelection: (vendorName: string, circuits: number) => void;
     toggleWatchlist: (vendorName: string, boothId: number) => void;
     addLocation: (location: string) => void;
     deleteLocation: (location: string) => void;
     placeBid: (vendorName: string, boothId: number, amount: number, circuits: number) => { success: boolean, message: string };
+    removeBid: (vendorName: string, boothId: number) => { success: boolean, message: string };
     requestBuyOut: (vendorName: string, boothId: number, circuits: number) => void;
     directBuyOut: (vendorName: string, boothId: number, circuits: number) => void;
     approveBuyOut: (boothId: number, vendorName: string) => void;
@@ -142,6 +145,17 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         'Vendor 1': new Set([4]),
         'Vendor 2': new Set([6]),
     });
+    const [circuitSelections, setCircuitSelections] = useState<{ [vendorName: string]: number }>({
+        'Vendor 1': 0,
+        'Vendor 2': 0,
+    });
+
+    const setCircuitSelection = useCallback((vendorName: string, circuits: number) => {
+        setCircuitSelections(prev => ({
+            ...prev,
+            [vendorName]: circuits,
+        }));
+    }, []);
 
     const toggleWatchlist = useCallback((vendorName: string, boothId: number) => {
         setWatchlist(prev => {
@@ -208,6 +222,61 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.title}!` };
     }, [booths, userBids, buyoutRequests]);
+
+    const removeBid = useCallback((vendorName: string, boothId: number) => {
+        const booth = booths.find(b => b.id === boothId);
+        if (!booth) return { success: false, message: "Booth not found." };
+        if (booth.status !== 'Open') return { success: false, message: "Cannot remove a bid from a closed booth." };
+        if (booth.buyoutMethod === 'Admin approve' && (buyoutRequests[boothId] || []).length > 0) {
+            return { success: false, message: "Cannot remove bid while a buyout request is pending." };
+        }
+
+        const vendorBidsOnBooth = (bids[boothId] || []).filter(b => b.vendorName === vendorName);
+        if (vendorBidsOnBooth.length === 0) {
+            return { success: false, message: "You do not have an active bid on this booth." };
+        }
+
+        const previousHighestBidderWasThisVendor = booth.currentBid === (userBids[vendorName]?.[boothId]?.bidAmount);
+
+        // --- Update `bids` (the detailed history) ---
+        const remainingBids = (bids[boothId] || []).filter(b => b.vendorName !== vendorName);
+        setBids(prev => ({
+            ...prev,
+            [boothId]: remainingBids
+        }));
+
+        // --- Update `userBids` (the summary) ---
+        setUserBids(prev => {
+            const newUserBids = JSON.parse(JSON.stringify(prev)); // Deep copy
+            if (newUserBids[vendorName]) {
+                delete newUserBids[vendorName][boothId];
+            }
+            return newUserBids;
+        });
+
+        // --- Update `booths` and find new highest bid ---
+        const newHighestBidderDetails = remainingBids.length > 0
+            ? remainingBids.reduce((max, bid) => bid.bidAmount > max.bidAmount ? bid : max, remainingBids[0])
+            : null;
+
+        setBooths(prev => prev.map(b => {
+            if (b.id === boothId) {
+                return { ...b, currentBid: newHighestBidderDetails ? newHighestBidderDetails.bidAmount : undefined };
+            }
+            return b;
+        }));
+
+        // --- Notify new highest bidder ---
+        if (newHighestBidderDetails && previousHighestBidderWasThisVendor && newHighestBidderDetails.vendorName !== vendorName) {
+            addNotification(
+                newHighestBidderDetails.vendorName,
+                "You are now the highest bidder!",
+                `The previous high bidder for "${booth.title}" has removed their bid. You are now the leading bidder with a bid of $${newHighestBidderDetails.bidAmount.toFixed(2)}.`
+            );
+        }
+
+        return { success: true, message: `Your bid for "${booth.title}" has been successfully removed.` };
+    }, [booths, bids, userBids, buyoutRequests, addNotification]);
 
     const requestBuyOut = useCallback((vendorName: string, boothId: number, circuits: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -391,7 +460,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, toggleWatchlist, addLocation, deleteLocation, placeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, circuitSelections, setCircuitSelection, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
             {children}
         </BiddingContext.Provider>
     );

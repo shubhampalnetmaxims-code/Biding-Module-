@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
-import { InfoIcon, ClockIcon, LocationPinIcon, TrendingUpIcon, StarIcon, QuestionMarkCircleIcon } from '../icons';
+import { InfoIcon, ClockIcon, LocationPinIcon, TrendingUpIcon, StarIcon, QuestionMarkCircleIcon, DollarSignIcon } from '../icons';
 import { BiddingContext } from '../../context/BiddingContext';
 import { Booth } from '../BoothManagement';
 import { ChangeBoothInfoModal } from '../ChangeBoothInfoModal';
@@ -33,18 +33,19 @@ type SortOption = 'endingSoon' | 'bidLowHigh';
 type FilterOption = 'all' | 'myBids' | 'myWatchlist';
 
 export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName }) => {
-  const { booths, placeBid, userBids, requestBuyOut, buyoutRequests, watchlist, toggleWatchlist } = useContext(BiddingContext);
+  const { booths, placeBid, removeBid, userBids, requestBuyOut, buyoutRequests, watchlist, toggleWatchlist, circuitSelections, setCircuitSelection } = useContext(BiddingContext);
   const { addToast } = useToast();
   
-  const [additionalCircuits, setAdditionalCircuits] = useState('0');
   const [bidInputs, setBidInputs] = useState<{ [key: number]: string }>({});
   const [bidError, setBidError] = useState<string | null>(null);
-  const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
   const [paymentModalState, setPaymentModalState] = useState<{isOpen: boolean, booth: Booth | null}>({isOpen: false, booth: null});
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [sortOption, setSortOption] = useState<SortOption>('endingSoon');
   const [filterOption, setFilterOption] = useState<FilterOption>('all');
   const [isHowItWorksModalOpen, setIsHowItWorksModalOpen] = useState(false);
+
+  const additionalCircuits = circuitSelections[vendorName] ?? 0;
 
   const handleBidChange = (boothId: number, value: string) => {
     setBidInputs(prev => ({ ...prev, [boothId]: value }));
@@ -52,7 +53,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
 
   const handlePlaceBid = (booth: Booth) => {
     const bidValue = parseFloat(bidInputs[booth.id]);
-    const numCircuits = parseInt(additionalCircuits, 10) || 0;
+    const numCircuits = additionalCircuits;
     
     if (isNaN(bidValue) || bidInputs[booth.id] === '') {
         setBidError("Please enter a valid bid amount.");
@@ -69,7 +70,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
   };
   
   const handleBuyOut = (booth: Booth) => {
-    const numCircuits = parseInt(additionalCircuits, 10) || 0;
+    const numCircuits = additionalCircuits;
     const totalPayable = booth.buyOutPrice + (numCircuits * 60);
 
     if (booth.buyoutMethod === 'Direct pay') {
@@ -78,9 +79,10 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
             title: 'Confirm Direct Buy Out',
             message: `You are about to purchase ${booth.title} for a total of $${totalPayable.toFixed(2)}. Do you want to proceed to payment?`,
             onConfirm: () => {
-                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
                 setPaymentModalState({ isOpen: true, booth: booth });
-            }
+            },
+            confirmText: 'Proceed to Payment'
         });
     } else { // Admin approve
         setConfirmModalState({
@@ -90,10 +92,29 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
             onConfirm: () => {
                 requestBuyOut(vendorName, booth.id, numCircuits);
                 addToast('Buy out request sent to admin for approval.', 'success');
-                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-            }
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
+            },
+            confirmText: 'Request Buy Out'
         });
     }
+  };
+
+  const handleRemoveBid = (booth: Booth) => {
+    setConfirmModalState({
+        isOpen: true,
+        title: 'Remove Bid',
+        message: `Are you sure you want to remove your bid for "${booth.title}"? This will free up one of your bidding slots but cannot be undone.`,
+        onConfirm: () => {
+            const result = removeBid(vendorName, booth.id);
+            if (result.success) {
+                addToast(result.message, 'success');
+            } else {
+                setBidError(result.message);
+            }
+            setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
+        },
+        confirmText: 'Remove Bid'
+    });
   };
   
   const locations = ['All', ...Array.from(new Set(booths.map(b => b.location)))];
@@ -164,7 +185,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
             <select 
                 id="circuits" 
                 value={additionalCircuits} 
-                onChange={(e) => setAdditionalCircuits(e.target.value)} 
+                onChange={(e) => setCircuitSelection(vendorName, parseInt(e.target.value, 10))} 
                 className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
             >
                 {Array.from({ length: 21 }, (_, i) => (
@@ -286,10 +307,34 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                   </div>
 
                   <div className="bg-slate-50/75 p-4 mt-auto rounded-b-xl space-y-3">
-                    {userBidDetails && !vendorBidStatus && (
-                         <div className="text-center p-2 bg-blue-100 text-blue-800 rounded-md font-semibold text-sm">
-                            You have a bid on this booth
-                         </div>
+                    {userBidDetails && (
+                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                            <h4 className="font-bold text-blue-800 mb-2 text-center">Your Bid Details</h4>
+                            <div className="space-y-1">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600">Bid Amount:</span>
+                                    <span className="font-semibold text-slate-800">${userBidDetails.bidAmount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-600">Electrical Circuits ({userBidDetails.circuits}):</span>
+                                    <span className="font-semibold text-slate-800">${(userBidDetails.circuits * 60).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between pt-1 border-t border-blue-200 mt-1">
+                                    <span className="font-bold text-slate-700">Total Bid Value:</span>
+                                    <span className="font-bold text-slate-900">${(userBidDetails.bidAmount + userBidDetails.circuits * 60).toFixed(2)}</span>
+                                </div>
+                            </div>
+                            {booth.status === 'Open' && !hasAnyPendingBuyout && (
+                                <div className="mt-2 pt-2 border-t border-blue-200">
+                                    <button
+                                        onClick={() => handleRemoveBid(booth)}
+                                        className="w-full text-center text-xs font-semibold text-red-600 hover:text-red-800 hover:bg-red-50 py-1 rounded-md transition-colors"
+                                    >
+                                        Remove Bid
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
                     
                     {booth.status === 'Open' && (
@@ -303,16 +348,21 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                                 <label htmlFor={`bid-${booth.id}`} className="block text-xs font-medium text-slate-600 mb-1">
                                     {userBidDetails ? 'Increase Your Bid' : 'Your Bid'} (min. ${nextMinBid.toFixed(2)})
                                 </label>
-                                <input
-                                type="number"
-                                id={`bid-${booth.id}`}
-                                value={bidInputs[booth.id] || ''}
-                                onChange={(e) => handleBidChange(booth.id, e.target.value)}
-                                placeholder={`$${nextMinBid.toFixed(2)} or more`}
-                                className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
-                                step={booth.increment}
-                                min={nextMinBid}
-                                />
+                                <div className="relative mt-1">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <DollarSignIcon className="h-5 w-5 text-slate-400" />
+                                    </div>
+                                    <input
+                                        type="number"
+                                        id={`bid-${booth.id}`}
+                                        value={bidInputs[booth.id] || ''}
+                                        onChange={(e) => handleBidChange(booth.id, e.target.value)}
+                                        placeholder={nextMinBid.toFixed(2)}
+                                        className="w-full rounded-lg border-2 border-slate-300 py-3 pl-10 pr-4 text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
+                                        step={booth.increment}
+                                        min={nextMinBid}
+                                    />
+                                </div>
                             </div>
                         )}
                         
@@ -325,7 +375,8 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                                 {!hasAnyPendingBuyout && (
                                     <button 
                                         onClick={() => handlePlaceBid(booth)} 
-                                        className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm" 
+                                        disabled={!bidInputs[booth.id]}
+                                        className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed" 
                                     >
                                         Place Bid
                                     </button>
@@ -360,16 +411,17 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
       />
       <ConfirmationModal
         isOpen={confirmModalState.isOpen}
-        onClose={() => setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} })}
+        onClose={() => setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' })}
         onConfirm={confirmModalState.onConfirm}
         title={confirmModalState.title}
         message={confirmModalState.message}
+        confirmText={confirmModalState.confirmText}
       />
       <PaymentModal
         isOpen={paymentModalState.isOpen}
         onClose={() => setPaymentModalState({isOpen: false, booth: null})}
         booth={paymentModalState.booth}
-        circuits={parseInt(additionalCircuits, 10) || 0}
+        circuits={additionalCircuits}
         vendorName={vendorName}
       />
       <HowItWorksModal
