@@ -261,6 +261,17 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                         <span className="text-slate-500">Buy Out Price:</span>
                         <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
                       </div>
+                      <div className="flex justify-between items-center text-slate-500">
+                        <div className="flex items-center gap-1.5" title={
+                            booth.buyoutMethod === 'Admin approve'
+                                ? 'Admin must approve your buyout request. Bidding is paused when the first request is made.'
+                                : 'Instantly purchase the booth. Payment is required immediately.'
+                        }>
+                            <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
+                            <span>Buyout Type:</span>
+                        </div>
+                        <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
+                      </div>
                        <div className="flex justify-between items-center text-slate-500">
                         <div className="flex items-center gap-1.5">
                             <TrendingUpIcon className="w-4 h-4" />
