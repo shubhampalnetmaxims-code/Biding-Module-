@@ -76,17 +76,28 @@ interface AllNotifications {
     [vendorName: string]: Notification[];
 }
 
+export interface BuyoutRequest {
+    vendorName: string;
+    circuits: number;
+    timestamp: string;
+}
+interface AllBuyoutRequests {
+    [boothId: string]: BuyoutRequest[];
+}
+
 interface BiddingContextType {
     booths: Booth[];
     bids: AllBids;
     userBids: UserBids;
     notifications: AllNotifications;
     locations: string[];
+    buyoutRequests: AllBuyoutRequests;
     addLocation: (location: string) => void;
     deleteLocation: (location: string) => void;
     placeBid: (vendorName: string, boothId: number, amount: number, circuits: number) => { success: boolean, message: string };
-    requestBuyOut: (vendorName: string, boothId: number) => void;
+    requestBuyOut: (vendorName: string, boothId: number, circuits: number) => void;
     directBuyOut: (vendorName: string, boothId: number, circuits: number) => void;
+    approveBuyOut: (boothId: number, vendorName: string) => void;
     confirmBid: (boothId: number, winningBidId: number) => void;
     addBooth: (booth: Omit<Booth, 'id'>) => void;
     updateBooth: (boothId: number, updatedBooth: Booth) => void;
@@ -104,6 +115,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [userBids, setUserBids] = useState<UserBids>(initialUserBidsData);
     const [notifications, setNotifications] = useState<AllNotifications>({ 'admin': [] });
     const [locations, setLocations] = useState<string[]>(initialLocationsData);
+    const [buyoutRequests, setBuyoutRequests] = useState<AllBuyoutRequests>({});
 
     const addNotification = useCallback((vendorName: string, title: string, message: string) => {
         setNotifications(prev => ({
@@ -116,6 +128,10 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return { success: false, message: "Booth not found." };
         if (booth.status !== 'Open') return { success: false, message: "Bidding for this booth is closed." };
+
+        if (booth.buyoutMethod === 'Admin approve' && (buyoutRequests[boothId] || []).length > 0) {
+            return { success: false, message: "This booth has a pending buyout request. Only buyout offers are being accepted at this time." };
+        }
 
         const currentHighestBid = booth.currentBid || booth.basePrice;
         if (amount < currentHighestBid + booth.increment) {
@@ -147,13 +163,60 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, currentBid: amount } : b));
 
         return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.title}!` };
-    }, [booths, userBids]);
+    }, [booths, userBids, buyoutRequests]);
 
-    const requestBuyOut = useCallback((vendorName: string, boothId: number) => {
+    const requestBuyOut = useCallback((vendorName: string, boothId: number, circuits: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return;
-        addNotification('admin', 'Buy Out Request', `${vendorName} has requested to buy out "${booth.title}" for $${booth.buyOutPrice.toFixed(2)}.`);
+        const newRequest: BuyoutRequest = { vendorName, circuits, timestamp: new Date().toISOString() };
+        
+        setBuyoutRequests(prev => ({
+            ...prev,
+            [boothId]: [...(prev[boothId] || []), newRequest]
+        }));
+        
+        addNotification('admin', 'Buy Out Request', `${vendorName} has requested to buy out "${booth.title}" for $${booth.buyOutPrice.toFixed(2)} (plus circuit costs).`);
     }, [booths, addNotification]);
+
+    const approveBuyOut = useCallback((boothId: number, winnerName: string) => {
+        const booth = booths.find(b => b.id === boothId);
+        const requests = buyoutRequests[boothId] || [];
+        const winningRequest = requests.find(r => r.vendorName === winnerName);
+
+        if (!booth || !winningRequest) return;
+
+        const totalPayable = booth.buyOutPrice + (winningRequest.circuits * 60);
+
+        setBooths(prev => prev.map(b => 
+            b.id === boothId 
+                ? { ...b, status: 'Sold', winner: winnerName, currentBid: totalPayable, paymentSubmitted: false, paymentConfirmed: false }
+                : b
+        ));
+
+        setBuyoutRequests(prev => {
+            const newRequests = { ...prev };
+            delete newRequests[boothId];
+            return newRequests;
+        });
+
+        addNotification(
+            winnerName,
+            'Congratulations! Your Buyout Was Approved!',
+            `Your buyout request for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`
+        );
+        
+        // Notify other vendors who requested a buyout for this booth
+        requests.forEach(req => {
+            if (req.vendorName !== winnerName) {
+                addNotification(
+                    req.vendorName,
+                    'Update on Your Buyout Request',
+                    `The booth "${booth.title}" has been sold to another vendor. Thank you for your interest.`
+                );
+            }
+        });
+    }, [booths, buyoutRequests, addNotification]);
+
 
     const directBuyOut = useCallback((vendorName: string, boothId: number, circuits: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -284,7 +347,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, addLocation, deleteLocation, placeBid, requestBuyOut, directBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, addLocation, deleteLocation, placeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
             {children}
         </BiddingContext.Provider>
     );

@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { SectionCard } from './SectionCard';
 import { InfoItem } from './InfoItem';
 import { ArrowLeftIcon, CheckCircleIcon } from './icons';
-import { BiddingContext } from '../context/BiddingContext';
+import { BiddingContext, BuyoutRequest } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 import { ConfirmBidModal } from './ConfirmBidModal';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -39,7 +39,7 @@ const formatDate = (dateString: string) => {
 };
 
 export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => {
-    const { bids, confirmBid, confirmPayment, revokeBid } = useContext(BiddingContext);
+    const { bids, buyoutRequests, confirmBid, approveBuyOut, confirmPayment, revokeBid } = useContext(BiddingContext);
     const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [bidToConfirm, setBidToConfirm] = useState<Bid | null>(null);
@@ -47,6 +47,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
 
     const boothBids = bids[booth.id] || [];
     const sortedBids = [...boothBids].sort((a, b) => b.bidAmount - a.bidAmount);
+    const boothBuyoutRequests = buyoutRequests[booth.id] || [];
     
     const handleOpenConfirmModal = (bid: Bid) => {
         setBidToConfirm(bid);
@@ -90,6 +91,20 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
         });
     };
 
+    const handleApproveBuyout = (boothId: number, request: BuyoutRequest) => {
+        const totalPayable = booth.buyOutPrice + (request.circuits * 60);
+        setConfirmModalState({
+            isOpen: true,
+            title: 'Approve Buyout Request',
+            message: `Are you sure you want to approve the buyout request from ${request.vendorName} for a total of $${totalPayable.toFixed(2)}? This will sell the booth and cannot be undone.`,
+            onConfirm: () => {
+                approveBuyOut(boothId, request.vendorName);
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            }
+        });
+    };
+
+
     const handleSelectVendor = (bid: Bid) => {
         if (selectedBid && selectedBid.id === bid.id) {
             setSelectedBid(null); // Toggle off if already selected
@@ -130,6 +145,34 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                     </div>
                 </div>
             </SectionCard>
+            
+            {booth.status === 'Open' && boothBuyoutRequests.length > 0 && (
+                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                     <h3 className="text-lg font-bold text-slate-900 mb-4">Buyout Requests ({boothBuyoutRequests.length})</h3>
+                     <div className="space-y-3">
+                        {boothBuyoutRequests.map(req => {
+                            const totalPayable = booth.buyOutPrice + (req.circuits * 60);
+                            return (
+                                <div key={req.vendorName} className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                    <div>
+                                        <p className="font-bold text-slate-800">{req.vendorName}</p>
+                                        <div className="text-sm text-slate-600 mt-1">
+                                            <span>Buyout: ${booth.buyOutPrice.toFixed(2)}</span>
+                                            <span className="mx-2 text-slate-400">|</span>
+                                            <span>Circuits: {req.circuits} (${(req.circuits * 60).toFixed(2)})</span>
+                                            <span className="mx-2 text-slate-400">|</span>
+                                            <span className="font-semibold">Total: ${totalPayable.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleApproveBuyout(booth.id, req)} className="bg-pink-600 text-white font-semibold px-4 py-1.5 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm w-full sm:w-auto">
+                                        Approve
+                                    </button>
+                                </div>
+                            )
+                        })}
+                     </div>
+                 </div>
+            )}
 
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Bidding History ({sortedBids.length} bids)</h3>

@@ -38,7 +38,7 @@ const RadioButton: React.FC<{ id: string, name: string, value: string, label: st
 );
 
 export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName }) => {
-  const { booths, placeBid, userBids, requestBuyOut } = useContext(BiddingContext);
+  const { booths, placeBid, userBids, requestBuyOut, buyoutRequests } = useContext(BiddingContext);
   const { addToast } = useToast();
   
   const [isTentSelected, setIsTentSelected] = useState(true);
@@ -119,9 +119,9 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         setConfirmModalState({
             isOpen: true,
             title: 'Request Buy Out',
-            message: `Are you sure you want to request to buy out ${booth.title} for $${booth.buyOutPrice.toFixed(2)}? An admin will review your request.`,
+            message: `Are you sure you want to request to buy out ${booth.title} for $${booth.buyOutPrice.toFixed(2)}? This request will include your selection of ${numCircuits} additional circuit(s). An admin will review your request.`,
             onConfirm: () => {
-                requestBuyOut(vendorName, booth.id);
+                requestBuyOut(vendorName, booth.id, numCircuits);
                 addToast('Buy out request sent to admin for approval.', 'success');
                 setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
             }
@@ -252,6 +252,8 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
               const highestBid = booth.currentBid || booth.basePrice;
               const nextMinBid = highestBid + booth.increment;
               const userBidDetails = vendorBidData[booth.id];
+              const hasAnyPendingBuyout = booth.buyoutMethod === 'Admin approve' && (buyoutRequests[booth.id] || []).length > 0;
+              const hasVendorRequestedBuyout = (buyoutRequests[booth.id] || []).some(req => req.vendorName === vendorName);
 
               return (
                 <div key={booth.id} className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
@@ -321,37 +323,53 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                     
                     {booth.status === 'Open' && (
                      <>
-                        <div>
-                            <label htmlFor={`bid-${booth.id}`} className="block text-xs font-medium text-slate-600 mb-1">
-                                {userBidDetails ? 'Increase Your Bid' : 'Your Bid'} (min. ${nextMinBid.toFixed(2)})
-                            </label>
-                            <input
-                            type="number"
-                            id={`bid-${booth.id}`}
-                            value={bidInputs[booth.id] || ''}
-                            onChange={(e) => handleBidChange(booth.id, e.target.value)}
-                            placeholder={`$${nextMinBid.toFixed(2)} or more`}
-                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
-                            step={booth.increment}
-                            min={nextMinBid}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button 
-                                onClick={() => handlePlaceBid(booth)} 
-                                className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm" 
-                            >
-                                Place Bid
-                            </button>
-                            <button 
-                                onClick={() => handleBuyOut(booth)} 
-                                className="w-full bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm"
-                            >
-                                Buy Out
-                            </button>
-                        </div>
+                        {hasAnyPendingBuyout ? (
+                            <div className="text-center p-2 bg-yellow-100 text-yellow-800 rounded-md font-semibold text-sm">
+                                Bidding is paused due to a pending buyout request.
+                            </div>
+                        ) : (
+                            <div>
+                                <label htmlFor={`bid-${booth.id}`} className="block text-xs font-medium text-slate-600 mb-1">
+                                    {userBidDetails ? 'Increase Your Bid' : 'Your Bid'} (min. ${nextMinBid.toFixed(2)})
+                                </label>
+                                <input
+                                type="number"
+                                id={`bid-${booth.id}`}
+                                value={bidInputs[booth.id] || ''}
+                                onChange={(e) => handleBidChange(booth.id, e.target.value)}
+                                placeholder={`$${nextMinBid.toFixed(2)} or more`}
+                                className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
+                                step={booth.increment}
+                                min={nextMinBid}
+                                />
+                            </div>
+                        )}
+                        
+                        {hasVendorRequestedBuyout ? (
+                            <div className="mt-3 text-center p-2 bg-blue-100 text-blue-800 rounded-md font-semibold text-sm">
+                                Buyout Requested
+                            </div>
+                        ) : (
+                            <div className={`mt-3 ${!hasAnyPendingBuyout ? 'grid grid-cols-2 gap-3' : 'grid'}`}>
+                                {!hasAnyPendingBuyout && (
+                                    <button 
+                                        onClick={() => handlePlaceBid(booth)} 
+                                        className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm" 
+                                    >
+                                        Place Bid
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={() => handleBuyOut(booth)} 
+                                    className="w-full bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm"
+                                >
+                                    Buy Out
+                                </button>
+                            </div>
+                        )}
                      </>
                     )}
+
 
                     {booth.status === 'Sold' && booth.winner === vendorName && (
                       <div className="text-center p-2 bg-blue-100 text-blue-800 rounded-md font-semibold">
