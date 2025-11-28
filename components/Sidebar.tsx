@@ -1,5 +1,5 @@
 import React from 'react';
-import { BiddingModuleIcon, MapIcon } from './icons';
+import { BiddingModuleIcon, MapIcon, DashboardIcon } from './icons';
 import { AdminViewType } from './AdminView';
 
 interface SidebarLinkProps {
@@ -32,6 +32,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) =
   return (
     <aside className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
       <nav className="flex flex-col gap-1">
+        <SidebarLink 
+            text="Dashboard" 
+            isActive={activeView === 'dashboard'} 
+            onClick={() => setActiveView('dashboard')}
+            icon={<DashboardIcon className="w-5 h-5" />}
+        />
         <SidebarLink 
             text="Booth Management" 
             isActive={activeView === 'booths'} 

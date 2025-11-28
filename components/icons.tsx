@@ -30,6 +30,14 @@ export const MapIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5
     </svg>
 );
 
+// FIX: Add missing DollarSignIcon.
+export const DollarSignIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"></line>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+    </svg>
+);
+
 export const MoreHorizontalIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="1"></circle>
@@ -123,4 +131,33 @@ export const BiddingModuleIcon: React.FC<{ className?: string }> = ({ className 
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
     </svg>
+);
+
+export const StarIcon: React.FC<{ className?: string; isFilled?: boolean }> = ({ className = 'w-5 h-5', isFilled = false }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill={isFilled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+  </svg>
+);
+
+export const QuestionMarkCircleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"></circle>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+  </svg>
+);
+
+export const DashboardIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"></rect>
+    <rect x="14" y="3" width="7" height="7"></rect>
+    <rect x="14" y="14" width="7" height="7"></rect>
+    <rect x="3" y="14" width="7" height="7"></rect>
+  </svg>
+);
+
+export const ExclamationTriangleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2.25c.83 0 1.5.67 1.5 1.5v12c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-12c0-.83.67-1.5 1.5-1.5zM12 20.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+  </svg>
 );

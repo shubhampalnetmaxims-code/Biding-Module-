@@ -1,14 +1,16 @@
 import React from 'react';
 
 export type Tab = 
+  | 'Bidding Dashboard'
+  | 'Bidding Module'
+  | 'My Booths'
   | 'Booth Description'
   | 'Business Details'
   | 'Contact & Social'
   | 'Documents'
   | 'Terms and Conditions'
-  | 'Invoice/Payment'
-  | 'Bidding Module'
-  | 'My Booths';
+  | 'Invoice/Payment';
+
 
 interface TabNavigationProps {
   tabs: Tab[];
