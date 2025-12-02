@@ -30,27 +30,29 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
   return (
-    <aside className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-      <nav className="flex flex-col gap-1">
-        <SidebarLink 
-            text="Dashboard" 
-            isActive={activeView === 'dashboard'} 
-            onClick={() => setActiveView('dashboard')}
-            icon={<DashboardIcon className="w-5 h-5" />}
-        />
-        <SidebarLink 
-            text="Booth Management" 
-            isActive={activeView === 'booths'} 
-            onClick={() => setActiveView('booths')}
-            icon={<BiddingModuleIcon className="w-5 h-5" />}
-        />
-        <SidebarLink 
-            text="Location Management" 
-            isActive={activeView === 'locations'} 
-            onClick={() => setActiveView('locations')}
-            icon={<MapIcon className="w-5 h-5" />}
-        />
-      </nav>
+    <aside className="bg-white w-64 h-full border-r border-slate-200">
+      <div className="p-4">
+        <nav className="flex flex-col gap-1">
+          <SidebarLink 
+              text="Dashboard" 
+              isActive={activeView === 'dashboard'} 
+              onClick={() => setActiveView('dashboard')}
+              icon={<DashboardIcon className="w-5 h-5" />}
+          />
+          <SidebarLink 
+              text="Booth Management" 
+              isActive={activeView === 'booths'} 
+              onClick={() => setActiveView('booths')}
+              icon={<BiddingModuleIcon className="w-5 h-5" />}
+          />
+          <SidebarLink 
+              text="Location Management" 
+              isActive={activeView === 'locations'} 
+              onClick={() => setActiveView('locations')}
+              icon={<MapIcon className="w-5 h-5" />}
+          />
+        </nav>
+      </div>
     </aside>
   );
 };

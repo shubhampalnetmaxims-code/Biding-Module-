@@ -1,7 +1,7 @@
 import React from 'react';
 import { HamburgerMenuIcon } from './icons';
 
-export type View = 'vendor1' | 'vendor2' | 'admin';
+export type View = 'vendor1' | 'vendor2' | 'vendor3' | 'admin';
 
 interface HeaderProps {
     activeView: View;
@@ -49,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setView, isSidebarOp
                  <div className="flex items-center gap-2">
                     <NavButton onClick={() => setView('vendor1')} isActive={activeView === 'vendor1'}>Vendor 1</NavButton>
                     <NavButton onClick={() => setView('vendor2')} isActive={activeView === 'vendor2'}>Vendor 2</NavButton>
+                    <NavButton onClick={() => setView('vendor3')} isActive={activeView === 'vendor3'}>Vendor 3</NavButton>
                     <NavButton onClick={() => setView('admin')} isActive={activeView === 'admin'}>Admin</NavButton>
                  </div>
             </div>

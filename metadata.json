@@ -1,5 +1,5 @@
 {
-  "name": "Application Status Dashboard",
+  "name": "Biding- Without Payment Integration",
   "description": "An interface to display the status and details of an application for an event, including booth information, business details, documents, and payment status.",
   "requestFramePermissions": []
 }

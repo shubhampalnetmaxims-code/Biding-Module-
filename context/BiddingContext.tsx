@@ -14,11 +14,11 @@ const initialBoothsData: Booth[] = [
     { id: 3, title: 'Info Point C2', type: '10x10', status: 'Sold', location: 'Zone C', basePrice: 100, buyOutPrice: 300, bidEndDate: pastDate(5), description: 'Central location, ideal for services.', increment: 10, buyoutMethod: 'Admin approve', winner: 'Vendor 2', currentBid: 120, paymentSubmitted: true, paymentConfirmed: true },
     { id: 4, title: 'Artisan Row A2', type: '10x10', status: 'Open', location: 'Zone A', basePrice: 300, buyOutPrice: 750, bidEndDate: futureDate(4, 18), description: 'Excellent visibility on the main walkway.', increment: 25, buyoutMethod: 'Direct pay', currentBid: 325 },
     { id: 5, title: 'Taco Truck Fiesta', type: '10x20', status: 'Open', location: 'Food Court', basePrice: 700, buyOutPrice: 1500, bidEndDate: futureDate(15), description: 'Large space suitable for a food truck.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 750 },
-    { id: 6, title: 'Handmade Jewelry', type: '10x10', status: 'Open', location: 'Artisan Row', basePrice: 200, buyOutPrice: 500, bidEndDate: futureDate(3, 19), description: 'Small booth perfect for delicate items.', increment: 20, buyoutMethod: 'Direct pay' },
+    { id: 6, title: 'Handmade Jewelry', type: '10x10', status: 'Open', location: 'Artisan Row', basePrice: 200, buyOutPrice: 500, bidEndDate: futureDate(3, 19), description: 'Small booth perfect for delicate items.', increment: 20, buyoutMethod: 'Direct pay', currentBid: 220 },
     { id: 7, title: 'Local Charity Info', type: '10x10', status: 'Open', location: 'Community Zone', basePrice: 50, buyOutPrice: 150, bidEndDate: futureDate(1, 1), description: 'Discounted rate for non-profits.', increment: 5, buyoutMethod: 'Admin approve' },
     { id: 8, title: 'Gourmet Coffee Cart', type: '10x10', status: 'Sold', location: 'Entrance', basePrice: 400, buyOutPrice: 900, bidEndDate: pastDate(1), description: 'High traffic area near the main entrance.', increment: 25, buyoutMethod: 'Direct pay', winner: 'Vendor 1', currentBid: 500, paymentSubmitted: true, paymentConfirmed: false },
     { id: 9, title: 'Pop-up Gallery D1', type: '10x15', status: 'Open', location: 'Artisan Row', basePrice: 350, buyOutPrice: 800, bidEndDate: futureDate(4, 2), description: 'Spacious booth for art displays.', increment: 25, buyoutMethod: 'Admin approve', currentBid: 375 },
-    { id: 10, title: 'Mobile Cafe Spot', type: '10x10', status: 'Open', location: 'Entrance', basePrice: 450, buyOutPrice: 1100, bidEndDate: futureDate(0, 10), description: 'Prime location for a mobile cafe.', increment: 50, buyoutMethod: 'Direct pay', currentBid: 500 },
+    { id: 10, title: 'Mobile Cafe Spot', type: '10x10', status: 'Open', location: 'Entrance', basePrice: 450, buyOutPrice: 1100, bidEndDate: futureDate(0, 10), description: 'Prime location for a mobile cafe.', increment: 50, buyoutMethod: 'Direct pay', currentBid: 550 },
 ];
 
 const initialLocationsData = Array.from(new Set(initialBoothsData.map(b => b.location)));
@@ -55,6 +55,9 @@ const initialBidsData: AllBids = {
     '5': [
         { id: 501, vendorName: 'Vendor 2', bidAmount: 750, circuits: 3, timestamp: pastDate(4) },
     ],
+    '6': [
+        { id: 601, vendorName: 'Vendor 3', bidAmount: 220, circuits: 0, timestamp: pastDate(0, 1) },
+    ],
     '8': [
         { id: 801, vendorName: 'Vendor 1', bidAmount: 450, circuits: 1, timestamp: pastDate(2, 1) },
         { id: 802, vendorName: 'Vendor 2', bidAmount: 475, circuits: 1, timestamp: pastDate(1, 20) },
@@ -65,6 +68,7 @@ const initialBidsData: AllBids = {
     ],
     '10': [
         { id: 1001, vendorName: 'Vendor 2', bidAmount: 500, circuits: 2, timestamp: pastDate(0, 2) },
+        { id: 1002, vendorName: 'Vendor 3', bidAmount: 550, circuits: 1, timestamp: pastDate(0, 1) },
     ]
 };
 
@@ -81,6 +85,10 @@ const initialUserBidsData: UserBids = {
         '5': { bidAmount: 750, circuits: 3 },
         '8': { bidAmount: 475, circuits: 1 },
         '10': { bidAmount: 500, circuits: 2 },
+    },
+    'Vendor 3': {
+        '6': { bidAmount: 220, circuits: 0 },
+        '10': { bidAmount: 550, circuits: 1 },
     }
 }
 
@@ -144,10 +152,12 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [watchlist, setWatchlist] = useState<Watchlist>({
         'Vendor 1': new Set([4]),
         'Vendor 2': new Set([6]),
+        'Vendor 3': new Set([1]),
     });
     const [circuitSelections, setCircuitSelections] = useState<{ [vendorName: string]: number }>({
         'Vendor 1': 0,
         'Vendor 2': 0,
+        'Vendor 3': 0,
     });
 
     const setCircuitSelection = useCallback((vendorName: string, circuits: number) => {

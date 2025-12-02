@@ -63,7 +63,8 @@ export const Analytics: React.FC = () => {
         const topBooths = Object.entries(bids)
             .map(([boothId, bidList]) => ({
                 boothId,
-                bidCount: bidList.length,
+                // FIX: Cast bidList to any[] to fix 'length' does not exist on type 'unknown' error.
+                bidCount: (bidList as any[]).length,
             }))
             .sort((a, b) => b.bidCount - a.bidCount)
             .slice(0, 5)
@@ -74,7 +75,8 @@ export const Analytics: React.FC = () => {
 
         const topBidders = Object.values(bids)
             .flat()
-            .reduce((acc, bid) => {
+            // FIX: Add 'any' type to bid to fix 'vendorName' does not exist on type 'unknown' error.
+            .reduce((acc, bid: any) => {
                 acc[bid.vendorName] = (acc[bid.vendorName] || 0) + 1;
                 return acc;
             }, {} as Record<string, number>);
@@ -87,6 +89,7 @@ export const Analytics: React.FC = () => {
         const revenueByLocation = soldBooths
             .filter(b => b.paymentConfirmed)
             .reduce((acc, booth) => {
+                // FIX: Ensure both operands are numbers before addition. `acc[booth.location]` and `booth.currentBid` can be undefined.
                 acc[booth.location] = (acc[booth.location] || 0) + (booth.currentBid || 0);
                 return acc;
             }, {} as Record<string, number>);

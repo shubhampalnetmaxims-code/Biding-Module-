@@ -11,9 +11,10 @@ export type AdminViewType = 'dashboard' | 'booths' | 'locations';
 
 interface AdminViewProps {
     isSidebarOpen: boolean;
+    setIsSidebarOpen: (isOpen: boolean) => void;
 }
 
-export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen }) => {
+export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [activeView, setActiveView] = useState<AdminViewType>('dashboard');
     const [selectedBoothId, setSelectedBoothId] = useState<number | null>(null);
     const { booths, notifications } = useContext(BiddingContext);
@@ -29,6 +30,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen }) => {
     };
     
     const selectedBooth = booths.find(b => b.id === selectedBoothId);
+
+    const handleSidebarItemClick = (view: AdminViewType) => {
+        setActiveView(view);
+        setSelectedBoothId(null);
+        setIsSidebarOpen(false);
+    };
     
     const renderContent = () => {
         if (selectedBooth) { // Always show details if a booth is selected, regardless of activeView
@@ -48,13 +55,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen }) => {
     }
 
     return (
-        <div className="flex">
-            <div className={`flex-shrink-0 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
-                <div className="w-64">
-                    <Sidebar activeView={activeView} setActiveView={(view) => { setActiveView(view); setSelectedBoothId(null); }} />
-                </div>
+        <div className="relative">
+            {/* Overlay */}
+            <div
+                className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={() => setIsSidebarOpen(false)}
+                aria-hidden="true"
+            />
+            
+            {/* Sidebar */}
+            <div className={`fixed top-0 left-0 h-full z-40 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <Sidebar activeView={activeView} setActiveView={handleSidebarItemClick} />
             </div>
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+
+            <main className="p-4 sm:p-6 lg:p-8">
                 {adminNotifications.length > 0 && activeView === 'dashboard' && ( // Only show notifications on dashboard
                     <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md shadow-md space-y-3 mb-6" role="alert">
                         <h3 className="font-bold text-lg">Admin Notifications</h3>

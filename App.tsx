@@ -10,7 +10,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Automatically close the sidebar when the view changes
+    // Automatically close the sidebar when the view changes from admin to vendor
     if (view !== 'admin') {
       setIsSidebarOpen(false);
     }
@@ -29,7 +29,8 @@ const App: React.FC = () => {
           <div className={`container mx-auto max-w-7xl ${view !== 'admin' ? 'p-4 sm:p-6 lg:p-8' : ''}`}>
             {view === 'vendor1' && <VendorView vendorName="Vendor 1" key="vendor1" />}
             {view === 'vendor2' && <VendorView vendorName="Vendor 2" key="vendor2" />}
-            {view === 'admin' && <AdminView isSidebarOpen={isSidebarOpen} />}
+            {view === 'vendor3' && <VendorView vendorName="Vendor 3" key="vendor3" />}
+            {view === 'admin' && <AdminView isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />}
           </div>
         </div>
       </BiddingProvider>

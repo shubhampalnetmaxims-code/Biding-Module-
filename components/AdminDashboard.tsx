@@ -81,11 +81,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ setActiveView, o
     
      const recentActivity = useMemo(() => {
         // FIX: Add boothId to each bid object to create a consistent data structure for activities.
+        // FIX: Cast bidList to any[] to fix 'map' does not exist on type 'unknown' error.
         const allBids = Object.entries(bids).flatMap(([boothId, bidList]) => 
-            bidList.map(bid => ({ ...bid, boothId: parseInt(boothId), type: 'bid' as const }))
+            (bidList as any[]).map(bid => ({ ...bid, boothId: parseInt(boothId), type: 'bid' as const }))
         );
+        // FIX: Cast requests to any[] to fix 'map' does not exist on type 'unknown' error.
         const allBuyouts = Object.entries(buyoutRequests).flatMap(([boothId, requests]) => 
-            requests.map(r => ({ ...r, boothId: parseInt(boothId), type: 'buyout' as const }))
+            (requests as any[]).map(r => ({ ...r, boothId: parseInt(boothId), type: 'buyout' as const }))
         );
         
         const combined = [...allBids, ...allBuyouts]
@@ -141,7 +143,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ setActiveView, o
                                         <p className="text-sm text-slate-600">
                                             <span className="font-semibold text-slate-800">{activity.vendorName}</span>
                                             {/* FIX: Remove `as any` assertion as TypeScript can now infer the correct type. */}
-                                            {activity.type === 'bid' ? ` placed a bid of $${activity.bidAmount.toFixed(2)} on ` : ' requested a buyout for '}
+                                            {activity.type === 'bid' ? ` placed a bid of $${(activity as any).bidAmount.toFixed(2)} on ` : ' requested a buyout for '}
                                             <span className="font-semibold text-slate-800">{booth.title}</span>.
                                             <span className="text-xs text-slate-400 ml-2">{new Date(activity.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                         </p>

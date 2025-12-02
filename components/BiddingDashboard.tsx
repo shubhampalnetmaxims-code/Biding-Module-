@@ -82,7 +82,8 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
 
     const pendingBuyouts = Object.values(buyoutRequests)
         .flat()
-        .filter(req => req.vendorName === vendorName)
+        // FIX: Add 'any' type to req to fix 'vendorName' does not exist on type 'unknown' error.
+        .filter((req: any) => req.vendorName === vendorName)
         .map(req => booths.find(b => {
              const reqBoothId = Object.keys(buyoutRequests).find(key => buyoutRequests[key].includes(req));
              return reqBoothId && b.id === parseInt(reqBoothId) && b.status === 'Open';
