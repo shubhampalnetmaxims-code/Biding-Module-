@@ -14,6 +14,8 @@ import { BiddingContext } from '../context/BiddingContext';
 import { InfoIcon } from './icons';
 import { useToast } from '../context/ToastContext';
 import { BiddingDashboard } from './BiddingDashboard';
+import { VendorBoothDetailModal } from './VendorBoothDetailModal';
+import { Booth } from './BoothManagement';
 
 const TABS: Tab[] = [
   'Bidding Dashboard',
@@ -43,6 +45,7 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
   const [activeTab, setActiveTab] = useState<Tab>(TABS[0]);
   const { notifications } = useContext(BiddingContext);
   const { addToast } = useToast();
+  const [detailedBooth, setDetailedBooth] = useState<Booth | null>(null);
   
   const vendorNotifications = notifications[vendorName] || [];
   const prevNotifications = usePrevious(vendorNotifications);
@@ -80,8 +83,8 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
       <TabNavigation tabs={TABS} activeTab={activeTab} setActiveTab={handleTabChange} />
       
       <div className="mt-6">
-        {activeTab === 'Bidding Dashboard' && <BiddingDashboard vendorName={vendorName} setActiveTab={handleTabChange} />}
-        {activeTab === 'Bidding Module' && <BiddingModuleSection vendorName={vendorName} />}
+        {activeTab === 'Bidding Dashboard' && <BiddingDashboard vendorName={vendorName} setActiveTab={handleTabChange} setDetailedBooth={setDetailedBooth} />}
+        {activeTab === 'Bidding Module' && <BiddingModuleSection vendorName={vendorName} setDetailedBooth={setDetailedBooth} />}
         {activeTab === 'My Booths' && <MyBoothsSection vendorName={vendorName} />}
         {activeTab === 'Booth Description' && <BoothDescriptionSection />}
         {activeTab === 'Business Details' && <BusinessDetailsSection />}
@@ -90,6 +93,13 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
         {activeTab === 'Terms and Conditions' && <TermsAndConditionsSection />}
         {activeTab === 'Invoice/Payment' && <InvoicePaymentSection />}
       </div>
+
+      <VendorBoothDetailModal
+          isOpen={!!detailedBooth}
+          onClose={() => setDetailedBooth(null)}
+          booth={detailedBooth}
+          vendorName={vendorName}
+      />
     </div>
   );
 };

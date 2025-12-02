@@ -1,121 +1,29 @@
-import React, { useState, useContext, useEffect, useMemo } from 'react';
-import { InfoIcon, ClockIcon, LocationPinIcon, TrendingUpIcon, StarIcon, QuestionMarkCircleIcon, DollarSignIcon } from '../icons';
+import React, { useState, useContext, useMemo } from 'react';
+import { InfoIcon, LocationPinIcon, TrendingUpIcon, StarIcon, QuestionMarkCircleIcon, MapIcon } from '../icons';
 import { BiddingContext } from '../../context/BiddingContext';
 import { Booth } from '../BoothManagement';
-import { ChangeBoothInfoModal } from '../ChangeBoothInfoModal';
-import { ErrorModal } from '../ErrorModal';
-import { useToast } from '../../context/ToastContext';
-import { ConfirmationModal } from '../ConfirmationModal';
-import { PaymentModal } from '../PaymentModal';
-import { CountdownTimer } from '../CountdownTimer';
 import { HowItWorksModal } from '../HowItWorksModal';
+import { EventMapModal } from '../EventMapModal';
+import { CountdownTimer } from '../CountdownTimer';
 
 interface BiddingModuleSectionProps {
     vendorName: string;
+    setDetailedBooth: (booth: Booth | null) => void;
 }
-
-const RadioButton: React.FC<{ id: string, name: string, value: string, label: string, checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }> = ({ id, name, value, label, checked, onChange }) => (
-    <div className="flex items-center">
-        <input 
-            id={id} 
-            name={name} 
-            type="radio" 
-            value={value}
-            checked={checked}
-            onChange={onChange}
-            className="h-5 w-5 text-pink-600 focus:ring-pink-500 border-slate-400 bg-white"
-        />
-        <label htmlFor={id} className="ml-3 block font-medium text-slate-700">{label}</label>
-    </div>
-);
 
 type SortOption = 'endingSoon' | 'bidLowHigh';
 type FilterOption = 'all' | 'myBids' | 'myWatchlist';
 
-export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName }) => {
-  const { booths, placeBid, removeBid, userBids, requestBuyOut, buyoutRequests, watchlist, toggleWatchlist, circuitSelections, setCircuitSelection } = useContext(BiddingContext);
-  const { addToast } = useToast();
+export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName, setDetailedBooth }) => {
+  const { booths, userBids, watchlist, toggleWatchlist, circuitSelections, setCircuitSelection } = useContext(BiddingContext);
   
-  const [bidInputs, setBidInputs] = useState<{ [key: number]: string }>({});
-  const [bidError, setBidError] = useState<string | null>(null);
-  const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
-  const [paymentModalState, setPaymentModalState] = useState<{isOpen: boolean, booth: Booth | null}>({isOpen: false, booth: null});
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [sortOption, setSortOption] = useState<SortOption>('endingSoon');
   const [filterOption, setFilterOption] = useState<FilterOption>('all');
   const [isHowItWorksModalOpen, setIsHowItWorksModalOpen] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   const additionalCircuits = circuitSelections[vendorName] ?? 0;
-
-  const handleBidChange = (boothId: number, value: string) => {
-    setBidInputs(prev => ({ ...prev, [boothId]: value }));
-  };
-
-  const handlePlaceBid = (booth: Booth) => {
-    const bidValue = parseFloat(bidInputs[booth.id]);
-    const numCircuits = additionalCircuits;
-    
-    if (isNaN(bidValue) || bidInputs[booth.id] === '') {
-        setBidError("Please enter a valid bid amount.");
-        return;
-    }
-
-    const result = placeBid(vendorName, booth.id, bidValue, numCircuits);
-    if (result.success) {
-      addToast(result.message, 'success');
-      handleBidChange(booth.id, '');
-    } else {
-      setBidError(result.message);
-    }
-  };
-  
-  const handleBuyOut = (booth: Booth) => {
-    const numCircuits = additionalCircuits;
-    const totalPayable = booth.buyOutPrice + (numCircuits * 60);
-
-    if (booth.buyoutMethod === 'Direct pay') {
-        setConfirmModalState({
-            isOpen: true,
-            title: 'Confirm Direct Buy Out',
-            message: `You are about to purchase ${booth.title} for a total of $${totalPayable.toFixed(2)}. Do you want to proceed to payment?`,
-            onConfirm: () => {
-                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
-                setPaymentModalState({ isOpen: true, booth: booth });
-            },
-            confirmText: 'Proceed to Payment'
-        });
-    } else { // Admin approve
-        setConfirmModalState({
-            isOpen: true,
-            title: 'Request Buy Out',
-            message: `Are you sure you want to request to buy out ${booth.title} for $${booth.buyOutPrice.toFixed(2)}? This request will include your selection of ${numCircuits} additional circuit(s). An admin will review your request.`,
-            onConfirm: () => {
-                requestBuyOut(vendorName, booth.id, numCircuits);
-                addToast('Buy out request sent to admin for approval.', 'success');
-                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
-            },
-            confirmText: 'Request Buy Out'
-        });
-    }
-  };
-
-  const handleRemoveBid = (booth: Booth) => {
-    setConfirmModalState({
-        isOpen: true,
-        title: 'Remove Bid',
-        message: `Are you sure you want to remove your bid for "${booth.title}"? This will free up one of your bidding slots but cannot be undone.`,
-        onConfirm: () => {
-            const result = removeBid(vendorName, booth.id);
-            if (result.success) {
-                addToast(result.message, 'success');
-            } else {
-                setBidError(result.message);
-            }
-            setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' });
-        },
-        confirmText: 'Remove Bid'
-    });
-  };
   
   const locations = ['All', ...Array.from(new Set(booths.map(b => b.location)))];
   const vendorBidData = userBids[vendorName] || {};
@@ -150,16 +58,6 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
     return processedBooths;
   }, [booths, selectedLocation, filterOption, sortOption, vendorBidData, vendorWatchlist]);
 
-
-  const getStatusBadgeClass = (status: Booth['status']) => {
-    switch (status) {
-        case 'Open': return 'bg-green-100 text-green-800';
-        case 'Closed': return 'bg-red-100 text-red-800';
-        case 'Sold': return 'bg-slate-200 text-slate-800 font-bold';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-  }
-
   const getVendorBidStatus = (booth: Booth): { text: string; className: string } | null => {
         const userBidDetails = vendorBidData[booth.id];
         if (!userBidDetails) return null;
@@ -167,7 +65,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         const isHighestBidder = booth.currentBid === userBidDetails.bidAmount;
 
         if (isHighestBidder) {
-            return { text: "WINNING", className: "bg-green-500 text-white" };
+            return { text: "Bid Placed", className: "bg-blue-500 text-white" };
         } else {
             return { text: "OUTBID", className: "bg-red-500 text-white" };
         }
@@ -186,7 +84,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                 id="circuits" 
                 value={additionalCircuits} 
                 onChange={(e) => setCircuitSelection(vendorName, parseInt(e.target.value, 10))} 
-                className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
+                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black"
             >
                 {Array.from({ length: 21 }, (_, i) => (
                     <option key={i} value={i}>{i}</option>
@@ -213,12 +111,15 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h2 className="text-2xl font-bold text-slate-900">Available Bidding Booths</h2>
+             <button onClick={() => setIsMapModalOpen(true)} className="flex items-center gap-2 text-sm font-semibold text-pink-600 hover:text-pink-800 transition-colors flex-shrink-0">
+                <MapIcon className="w-5 h-5"/> View Event Map
+            </button>
         </div>
         
          <div className="flex flex-wrap items-end gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
              <div className="flex-grow min-w-[150px]">
                 <label htmlFor="filter-bids" className="block text-sm font-medium text-slate-700 mb-1">Show</label>
-                <select id="filter-bids" value={filterOption} onChange={e => setFilterOption(e.target.value as FilterOption)} className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black">
+                <select id="filter-bids" value={filterOption} onChange={e => setFilterOption(e.target.value as FilterOption)} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
                     <option value="all">All Booths</option>
                     <option value="myBids">Booths I'm Bidding On</option>
                     <option value="myWatchlist">My Watchlist</option>
@@ -226,44 +127,43 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
             </div>
              <div className="flex-grow min-w-[150px]">
                 <label htmlFor="location-filter" className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                 <select id="location-filter" value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black">
+                 <select id="location-filter" value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
                     {locations.map(location => ( <option key={location} value={location}> {location} </option>))}
                 </select>
             </div>
             <div className="flex-grow min-w-[150px]">
                 <label htmlFor="sort-bids" className="block text-sm font-medium text-slate-700 mb-1">Sort by</label>
-                <select id="sort-bids" value={sortOption} onChange={e => setSortOption(e.target.value as SortOption)} className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black">
+                <select id="sort-bids" value={sortOption} onChange={e => setSortOption(e.target.value as SortOption)} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
                     <option value="endingSoon">Time Left (Ending Soonest)</option>
                     <option value="bidLowHigh">Current Bid (Low to High)</option>
                 </select>
             </div>
         </div>
 
-
         {filteredAndSortedBooths.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredAndSortedBooths.map(booth => {
               const highestBid = booth.currentBid || booth.basePrice;
-              const nextMinBid = highestBid + booth.increment;
-              const userBidDetails = vendorBidData[booth.id];
               const vendorBidStatus = getVendorBidStatus(booth);
-              const hasAnyPendingBuyout = booth.buyoutMethod === 'Admin approve' && (buyoutRequests[booth.id] || []).length > 0;
-              const hasVendorRequestedBuyout = (buyoutRequests[booth.id] || []).some(req => req.vendorName === vendorName);
               const isWatched = vendorWatchlist.has(booth.id);
 
               return (
-                <div key={booth.id} className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative">
+                <div 
+                  key={booth.id} 
+                  onClick={() => setDetailedBooth(booth)} 
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col relative transition-shadow hover:shadow-md cursor-pointer"
+                >
                   {vendorBidStatus && (
                       <div className={`absolute top-0 right-4 -mt-3 px-3 py-1 text-xs font-bold uppercase rounded-full shadow-md ${vendorBidStatus.className}`}>
                           {vendorBidStatus.text}
                       </div>
                   )}
-                  <div className="p-5">
+                  <div className="p-5 flex-grow">
                      <div className="flex justify-between items-start mb-1.5">
                         <h3 className="text-lg font-bold text-slate-900 pr-2">
-                            {booth.title} <span className="text-base font-medium text-slate-500">({booth.type})</span>
+                            {booth.title} <span className="text-base font-medium text-slate-500">({booth.type} - {booth.size})</span>
                         </h3>
-                         <button onClick={() => toggleWatchlist(vendorName, booth.id)} className={`p-1 -mr-1 -mt-1 rounded-full ${isWatched ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-slate-400'}`} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
+                         <button onClick={(e) => { e.stopPropagation(); toggleWatchlist(vendorName, booth.id); }} className={`p-1 -mr-1 -mt-1 rounded-full z-10 ${isWatched ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-slate-400'}`} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
                             <StarIcon isFilled={isWatched} className="w-6 h-6"/>
                          </button>
                     </div>
@@ -274,123 +174,46 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                     <p className="text-sm text-slate-600 mt-3 h-10">{booth.description}</p>
                     
                     <div className={`mt-4 bg-slate-50 rounded-lg p-3 space-y-2 text-sm`}>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Current Bid:</span>
-                        <span className="font-bold text-slate-800 text-base">${highestBid.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Buy Out Price:</span>
-                        <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-slate-500">
-                        <div className="flex items-center gap-1.5" title={
-                            booth.buyoutMethod === 'Admin approve'
-                                ? 'Admin must approve your buyout request. Bidding is paused when the first request is made.'
-                                : 'Instantly purchase the booth. Payment is required immediately.'
-                        }>
-                            <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
-                            <span>Buyout Type:</span>
-                        </div>
-                        <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
-                      </div>
-                       <div className="flex justify-between items-center text-slate-500">
-                        <div className="flex items-center gap-1.5">
-                            <TrendingUpIcon className="w-4 h-4" />
-                            <span>Increment:</span>
-                        </div>
-                        <span className="font-medium text-slate-600">${booth.increment.toFixed(2)}</span>
-                      </div>
+                      {!booth.hideBiddingPrice ? (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-500">Current Bid:</span>
+                            <span className="font-bold text-slate-800 text-base">${highestBid.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-500">Buy Out Price:</span>
+                            <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                            <div className="flex justify-between items-center text-slate-500">
+                                <div className="flex items-center gap-1.5" title={
+                                    booth.buyoutMethod === 'Admin approve'
+                                        ? 'Admin must approve your buyout request.'
+                                        : 'Instantly purchase the booth.'
+                                }>
+                                    <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
+                                    <span>Buyout Type:</span>
+                                </div>
+                                <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-500">
+                                <div className="flex items-center gap-1.5">
+                                    <TrendingUpIcon className="w-4 h-4" />
+                                    <span>Increment:</span>
+                                </div>
+                                <span className="font-medium text-slate-600">${booth.increment.toFixed(2)}</span>
+                            </div>
+                        </>
+                      )}
                       <div className="pt-2 border-t border-slate-200">
                         <CountdownTimer endDate={booth.bidEndDate} />
                       </div>
                     </div>
                   </div>
-
-                  <div className="bg-slate-50/75 p-4 mt-auto rounded-b-xl space-y-3">
-                    {userBidDetails && (
-                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                            <h4 className="font-bold text-blue-800 mb-2 text-center">Your Bid Details</h4>
-                            <div className="space-y-1">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-600">Bid Amount:</span>
-                                    <span className="font-semibold text-slate-800">${userBidDetails.bidAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-600">Electrical Circuits ({userBidDetails.circuits}):</span>
-                                    <span className="font-semibold text-slate-800">${(userBidDetails.circuits * 60).toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between pt-1 border-t border-blue-200 mt-1">
-                                    <span className="font-bold text-slate-700">Total Bid Value:</span>
-                                    <span className="font-bold text-slate-900">${(userBidDetails.bidAmount + userBidDetails.circuits * 60).toFixed(2)}</span>
-                                </div>
-                            </div>
-                            {booth.status === 'Open' && !hasAnyPendingBuyout && (
-                                <div className="mt-2 pt-2 border-t border-blue-200">
-                                    <button
-                                        onClick={() => handleRemoveBid(booth)}
-                                        className="w-full text-center text-xs font-semibold text-red-600 hover:text-red-800 hover:bg-red-50 py-1 rounded-md transition-colors"
-                                    >
-                                        Remove Bid
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                    
-                    {booth.status === 'Open' && (
-                     <>
-                        {hasAnyPendingBuyout ? (
-                            <div className="text-center p-2 bg-yellow-100 text-yellow-800 rounded-md font-semibold text-sm">
-                                Bidding is paused due to a pending buyout request.
-                            </div>
-                        ) : (
-                            <div>
-                                <label htmlFor={`bid-${booth.id}`} className="block text-xs font-medium text-slate-600 mb-1">
-                                    {userBidDetails ? 'Increase Your Bid' : 'Your Bid'} (min. ${nextMinBid.toFixed(2)})
-                                </label>
-                                <div className="relative mt-1">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <DollarSignIcon className="h-5 w-5 text-slate-400" />
-                                    </div>
-                                    <input
-                                        type="number"
-                                        id={`bid-${booth.id}`}
-                                        value={bidInputs[booth.id] || ''}
-                                        onChange={(e) => handleBidChange(booth.id, e.target.value)}
-                                        placeholder={nextMinBid.toFixed(2)}
-                                        className="w-full rounded-lg border-2 border-slate-300 py-3 pl-10 pr-4 text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
-                                        step={booth.increment}
-                                        min={nextMinBid}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                        
-                        {hasVendorRequestedBuyout ? (
-                            <div className="mt-3 text-center p-2 bg-blue-100 text-blue-800 rounded-md font-semibold text-sm">
-                                Buyout Requested
-                            </div>
-                        ) : (
-                            <div className={`mt-3 ${!hasAnyPendingBuyout ? 'grid grid-cols-2 gap-3' : 'grid'}`}>
-                                {!hasAnyPendingBuyout && (
-                                    <button 
-                                        onClick={() => handlePlaceBid(booth)} 
-                                        disabled={!bidInputs[booth.id]}
-                                        className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed" 
-                                    >
-                                        Place Bid
-                                    </button>
-                                )}
-                                <button 
-                                    onClick={() => handleBuyOut(booth)} 
-                                    className="w-full bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm"
-                                >
-                                    Buy Out
-                                </button>
-                            </div>
-                        )}
-                     </>
-                    )}
+                  <div className="bg-slate-50/75 p-3 mt-auto rounded-b-xl text-center">
+                    <span className="font-semibold text-pink-600 text-sm">Click for details & bidding</span>
                   </div>
                 </div>
               );
@@ -404,29 +227,13 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
         )}
       </div>
 
-      <ErrorModal 
-          isOpen={!!bidError} 
-          onClose={() => setBidError(null)} 
-          message={bidError} 
-      />
-      <ConfirmationModal
-        isOpen={confirmModalState.isOpen}
-        onClose={() => setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {}, confirmText: 'Confirm' })}
-        onConfirm={confirmModalState.onConfirm}
-        title={confirmModalState.title}
-        message={confirmModalState.message}
-        confirmText={confirmModalState.confirmText}
-      />
-      <PaymentModal
-        isOpen={paymentModalState.isOpen}
-        onClose={() => setPaymentModalState({isOpen: false, booth: null})}
-        booth={paymentModalState.booth}
-        circuits={additionalCircuits}
-        vendorName={vendorName}
-      />
       <HowItWorksModal
         isOpen={isHowItWorksModalOpen}
         onClose={() => setIsHowItWorksModalOpen(false)}
+      />
+      <EventMapModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
       />
     </div>
   );

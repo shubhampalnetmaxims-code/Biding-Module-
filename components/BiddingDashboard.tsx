@@ -8,6 +8,7 @@ import { CountdownTimer } from './CountdownTimer';
 interface BiddingDashboardProps {
     vendorName: string;
     setActiveTab: (tab: Tab) => void;
+    setDetailedBooth: (booth: Booth | null) => void;
 }
 
 const DashboardCard: React.FC<{ booth: Booth, status: 'winning' | 'outbid' | 'pending_buyout' | 'watchlist', vendorBid?: number, highestBid?: number, onNavigate: () => void }> = 
@@ -47,7 +48,7 @@ const DashboardCard: React.FC<{ booth: Booth, status: 'winning' | 'outbid' | 'pe
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                 <div>
                     <p className={`font-bold ${config.textColor}`}>{config.title}</p>
-                    <h4 className="text-lg font-bold text-slate-800">{booth.title} <span className="text-base font-medium text-slate-500">({booth.type})</span></h4>
+                    <h4 className="text-lg font-bold text-slate-800">{booth.title} <span className="text-base font-medium text-slate-500">({booth.type} - {booth.size})</span></h4>
                     <div className="text-sm text-slate-600 mt-1 space-y-1">
                         {status === 'winning' && <p>Your Bid: <span className="font-semibold">${vendorBid?.toFixed(2)}</span></p>}
                         {status === 'outbid' && <p>Your Bid: <span className="font-semibold">${vendorBid?.toFixed(2)}</span> / Highest: <span className="font-semibold">${highestBid?.toFixed(2)}</span></p>}
@@ -67,7 +68,7 @@ const DashboardCard: React.FC<{ booth: Booth, status: 'winning' | 'outbid' | 'pe
 }
 
 
-export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, setActiveTab }) => {
+export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, setActiveTab, setDetailedBooth }) => {
     const { booths, userBids, buyoutRequests, watchlist } = useContext(BiddingContext);
     
     const vendorBidData = userBids[vendorName] || {};
@@ -94,7 +95,10 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
         .map(boothId => booths.find(b => b.id === boothId && b.status === 'Open'))
         .filter((b): b is Booth => !!b);
 
-    const navigateToBidding = () => setActiveTab('Bidding Module');
+    const handleNavigate = (booth: Booth) => {
+        setActiveTab('Bidding Module');
+        setDetailedBooth(booth);
+    };
 
     return (
         <div className="space-y-8">
@@ -106,10 +110,10 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
                     ) : (
                         <>
                             {winningBids.map(booth => (
-                                <DashboardCard key={`win-${booth.id}`} booth={booth} status="winning" vendorBid={vendorBidData[booth.id].bidAmount} onNavigate={navigateToBidding}/>
+                                <DashboardCard key={`win-${booth.id}`} booth={booth} status="winning" vendorBid={vendorBidData[booth.id].bidAmount} onNavigate={() => handleNavigate(booth)}/>
                             ))}
                              {outbidBids.map(booth => (
-                                <DashboardCard key={`outbid-${booth.id}`} booth={booth} status="outbid" vendorBid={vendorBidData[booth.id].bidAmount} highestBid={booth.currentBid} onNavigate={navigateToBidding}/>
+                                <DashboardCard key={`outbid-${booth.id}`} booth={booth} status="outbid" vendorBid={vendorBidData[booth.id].bidAmount} highestBid={booth.currentBid} onNavigate={() => handleNavigate(booth)}/>
                             ))}
                         </>
                     )}
@@ -121,7 +125,7 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
                 <div className="space-y-4">
                     {pendingBuyouts.length > 0 ? (
                         pendingBuyouts.map(booth => (
-                            <DashboardCard key={`buyout-${booth.id}`} booth={booth} status="pending_buyout" onNavigate={navigateToBidding} />
+                            <DashboardCard key={`buyout-${booth.id}`} booth={booth} status="pending_buyout" onNavigate={() => handleNavigate(booth)} />
                         ))
                     ) : (
                          <p className="text-slate-500 text-sm">You have no pending buyout requests.</p>
@@ -134,7 +138,7 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
                  <div className="space-y-4">
                     {watchlistBooths.length > 0 ? (
                         watchlistBooths.map(booth => (
-                           <DashboardCard key={`watch-${booth.id}`} booth={booth} status="watchlist" onNavigate={navigateToBidding}/>
+                           <DashboardCard key={`watch-${booth.id}`} booth={booth} status="watchlist" onNavigate={() => handleNavigate(booth)}/>
                         ))
                     ) : (
                          <p className="text-slate-500 text-sm">You are not watching any booths. Click the star icon on a booth in the 'Bidding Module' to add it to your watchlist.</p>

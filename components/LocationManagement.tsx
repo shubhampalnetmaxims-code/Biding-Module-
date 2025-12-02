@@ -51,7 +51,7 @@ export const LocationManagement: React.FC = () => {
                             value={newLocation}
                             onChange={(e) => setNewLocation(e.target.value)}
                             placeholder="Enter a new location name"
-                            className="w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black"
+                            className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black"
                         />
                     </div>
                     <button

@@ -133,6 +133,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                  )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
                     <InfoItem label="Type" value={booth.type} />
+                    <InfoItem label="Size" value={booth.size} />
                     <InfoItem label="Status" value={booth.status} />
                     <InfoItem label="Location" value={booth.location} />
                     <InfoItem label="Base Price" value={`$${booth.basePrice.toFixed(2)}`} />

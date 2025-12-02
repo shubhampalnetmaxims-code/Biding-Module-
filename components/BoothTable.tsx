@@ -63,6 +63,7 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current Bid</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Location</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Size</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Bid End Date</th>
                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -92,6 +93,7 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{booth.location}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{booth.size}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                     {booth.status === 'Open' ? <CountdownTimer endDate={booth.bidEndDate}/> : formatDate(booth.bidEndDate)}
                                 </td>

@@ -61,16 +61,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, boo
                             <div className="mt-2 space-y-4">
                                 <div>
                                     <label htmlFor="cardNumber" className="block text-sm font-medium text-slate-700">Card Number</label>
-                                    <input type="text" name="cardNumber" id="cardNumber" className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black" placeholder="•••• •••• •••• 4242" defaultValue="4242424242424242" required/>
+                                    <input type="text" name="cardNumber" id="cardNumber" className="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black" placeholder="•••• •••• •••• 4242" defaultValue="4242424242424242" required/>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                      <div>
                                         <label htmlFor="expiryDate" className="block text-sm font-medium text-slate-700">Expiry Date</label>
-                                        <input type="text" name="expiryDate" id="expiryDate" className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black" placeholder="MM / YY" defaultValue="12/26" required />
+                                        <input type="text" name="expiryDate" id="expiryDate" className="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black" placeholder="MM / YY" defaultValue="12/26" required />
                                     </div>
                                      <div>
                                         <label htmlFor="cvc" className="block text-sm font-medium text-slate-700">CVC</label>
-                                        <input type="text" name="cvc" id="cvc" className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm bg-white text-black" placeholder="•••" defaultValue="123" required />
+                                        <input type="text" name="cvc" id="cvc" className="mt-1 block w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black" placeholder="•••" defaultValue="123" required />
                                     </div>
                                 </div>
                             </div>

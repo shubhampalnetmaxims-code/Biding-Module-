@@ -6,8 +6,11 @@ import { BiddingContext } from '../context/BiddingContext';
 import { LocationManagement } from './LocationManagement';
 import { InfoIcon } from './icons';
 import { AdminDashboard } from './AdminDashboard';
+import { CreateEditBoothPage } from './CreateEditBoothPage';
+import { Booth } from './BoothManagement';
+import { Settings } from './Settings';
 
-export type AdminViewType = 'dashboard' | 'booths' | 'locations';
+export type AdminViewType = 'dashboard' | 'booths' | 'locations' | 'settings';
 
 interface AdminViewProps {
     isSidebarOpen: boolean;
@@ -16,39 +19,72 @@ interface AdminViewProps {
 
 export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [activeView, setActiveView] = useState<AdminViewType>('dashboard');
-    const [selectedBoothId, setSelectedBoothId] = useState<number | null>(null);
-    const { booths, notifications } = useContext(BiddingContext);
+    const [boothViewMode, setBoothViewMode] = useState<'list' | 'details' | 'create' | 'edit'>('list');
+    const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null);
+    const { booths, notifications, addBooth, updateBooth } = useContext(BiddingContext);
     const adminNotifications = notifications['admin'] || [];
 
     const handleViewBoothDetails = (boothId: number) => {
-        setActiveView('booths'); // Ensure we are in the right main view
-        setSelectedBoothId(boothId);
+        const booth = booths.find(b => b.id === boothId);
+        if (booth) {
+            setSelectedBooth(booth);
+            setBoothViewMode('details');
+            setActiveView('booths');
+        }
     };
 
     const handleBackToList = () => {
-        setSelectedBoothId(null);
+        setSelectedBooth(null);
+        setBoothViewMode('list');
     };
     
-    const selectedBooth = booths.find(b => b.id === selectedBoothId);
+    const handleGoToCreate = () => {
+        setSelectedBooth(null);
+        setBoothViewMode('create');
+    };
+    
+    const handleGoToEdit = (booth: Booth) => {
+        setSelectedBooth(booth);
+        setBoothViewMode('edit');
+    };
+
+    const handleSaveBooth = (boothData: Omit<Booth, 'id'> | Booth) => {
+        if ('id' in boothData) {
+            updateBooth(boothData.id, boothData);
+        } else {
+            addBooth(boothData);
+        }
+        handleBackToList();
+    };
 
     const handleSidebarItemClick = (view: AdminViewType) => {
         setActiveView(view);
-        setSelectedBoothId(null);
+        setBoothViewMode('list'); // Reset to list when changing main view
+        setSelectedBooth(null);
         setIsSidebarOpen(false);
     };
     
     const renderContent = () => {
-        if (selectedBooth) { // Always show details if a booth is selected, regardless of activeView
-            return <BoothDetails booth={selectedBooth} onBack={handleBackToList} />;
-        }
-
         switch (activeView) {
             case 'dashboard':
                 return <AdminDashboard setActiveView={setActiveView} onViewDetails={handleViewBoothDetails} />;
-            case 'booths':
-                return <BoothManagement onViewDetails={handleViewBoothDetails} />;
             case 'locations':
                 return <LocationManagement />;
+            case 'settings':
+                return <Settings />;
+            case 'booths':
+                switch (boothViewMode) {
+                    case 'list':
+                        return <BoothManagement onViewDetails={handleViewBoothDetails} onGoToCreate={handleGoToCreate} onGoToEdit={handleGoToEdit} />;
+                    case 'details':
+                        return selectedBooth ? <BoothDetails booth={selectedBooth} onBack={handleBackToList} /> : null;
+                    case 'create':
+                        return <CreateEditBoothPage onSave={handleSaveBooth} onCancel={handleBackToList} />;
+                    case 'edit':
+                        return selectedBooth ? <CreateEditBoothPage boothToEdit={selectedBooth} onSave={handleSaveBooth} onCancel={handleBackToList} /> : null;
+                    default:
+                        return null;
+                }
             default:
                 return null;
         }

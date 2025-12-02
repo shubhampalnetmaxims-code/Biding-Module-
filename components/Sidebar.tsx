@@ -1,5 +1,5 @@
 import React from 'react';
-import { BiddingModuleIcon, MapIcon, DashboardIcon } from './icons';
+import { BiddingModuleIcon, MapIcon, DashboardIcon, SettingsIcon } from './icons';
 import { AdminViewType } from './AdminView';
 
 interface SidebarLinkProps {
@@ -50,6 +50,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) =
               isActive={activeView === 'locations'} 
               onClick={() => setActiveView('locations')}
               icon={<MapIcon className="w-5 h-5" />}
+          />
+          <SidebarLink 
+              text="Settings" 
+              isActive={activeView === 'settings'} 
+              onClick={() => setActiveView('settings')}
+              icon={<SettingsIcon className="w-5 h-5" />}
           />
         </nav>
       </div>

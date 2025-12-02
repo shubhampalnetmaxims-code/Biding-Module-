@@ -1,5 +1,6 @@
 import React, { useContext, useMemo } from 'react';
 import { BiddingContext } from '../context/BiddingContext';
+import { Booth } from './BoothManagement';
 
 const StatCard: React.FC<{ title: string; value: string; description: string; }> = ({ title, value, description }) => (
     <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
@@ -88,14 +89,15 @@ export const Analytics: React.FC = () => {
             
         const revenueByLocation = soldBooths
             .filter(b => b.paymentConfirmed)
-            .reduce((acc, booth) => {
-                // FIX: Ensure both operands are numbers before addition. `acc[booth.location]` and `booth.currentBid` can be undefined.
+            // FIX: Explicitly type `booth` parameter to resolve cascading type errors.
+            .reduce((acc: Record<string, number>, booth: Booth) => {
                 acc[booth.location] = (acc[booth.location] || 0) + (booth.currentBid || 0);
                 return acc;
             }, {} as Record<string, number>);
             
         const sortedRevenueByLocation = Object.entries(revenueByLocation)
-            .sort(([, a], [, b]) => b - a)
+            // FIX: Explicitly cast sort parameters to `number` to resolve arithmetic error.
+            .sort(([, a], [, b]) => (b as number) - (a as number))
             .map(([label, value]) => ({ label, value: `$${value.toLocaleString()}` }));
 
         return {
