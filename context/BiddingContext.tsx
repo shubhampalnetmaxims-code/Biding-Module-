@@ -143,6 +143,11 @@ interface BroadcastMessage {
     timestamp: string;
 }
 
+type BulkAction =
+  | { type: 'delete' }
+  | { type: 'changeStatus', status: Booth['status'] }
+  | { type: 'extendBidding', hours: number };
+
 interface BiddingContextType {
     booths: Booth[];
     bids: AllBids;
@@ -166,6 +171,7 @@ interface BiddingContextType {
     addBooth: (booth: Omit<Booth, 'id'>) => void;
     updateBooth: (boothId: number, updatedBooth: Booth) => void;
     deleteBooth: (boothId: number) => void;
+    bulkUpdateBooths: (boothIds: number[], action: BulkAction) => void;
     submitPayment: (boothId: number) => void;
     confirmPayment: (boothId: number) => void;
     revokeBid: (boothId: number) => void;
@@ -437,6 +443,27 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         setBooths(prev => prev.filter(b => b.id !== boothId));
     }, []);
 
+    const bulkUpdateBooths = useCallback((boothIds: number[], action: BulkAction) => {
+        setBooths(prev => {
+            if (action.type === 'delete') {
+                return prev.filter(b => !boothIds.includes(b.id));
+            }
+            return prev.map(b => {
+                if (boothIds.includes(b.id)) {
+                    if (action.type === 'changeStatus') {
+                        return { ...b, status: action.status };
+                    }
+                    if (action.type === 'extendBidding' && b.status === 'Open' && b.bidEndDate) {
+                        const newEndDate = new Date(b.bidEndDate);
+                        newEndDate.setHours(newEndDate.getHours() + action.hours);
+                        return { ...b, bidEndDate: newEndDate.toISOString() };
+                    }
+                }
+                return b;
+            });
+        });
+    }, []);
+
     const addLocation = useCallback((location: string) => {
         if (location && !locations.includes(location)) {
             setLocations(prev => [...prev, location]);
@@ -450,7 +477,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, bulkUpdateBooths, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
             {children}
         </BiddingContext.Provider>
     );

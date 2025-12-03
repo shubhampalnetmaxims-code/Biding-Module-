@@ -1,8 +1,9 @@
 import React, { useState, useContext, useMemo } from 'react';
-import { PlusCircleIcon } from './icons';
+import { PlusCircleIcon, TrashIcon } from './icons';
 import { BoothTable } from './BoothTable';
 import { BiddingContext } from '../context/BiddingContext';
 import { ConfirmationModal } from './ConfirmationModal';
+import { useToast } from '../context/ToastContext';
 
 export interface Booth {
     id: number;
@@ -40,8 +41,10 @@ interface BoothManagementProps {
 type BoothTab = 'bidding' | 'nonBidding';
 
 export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails, onGoToCreate, onGoToEdit }) => {
-    const { booths, deleteBooth } = useContext(BiddingContext);
+    const { booths, deleteBooth, bulkUpdateBooths } = useContext(BiddingContext);
+    const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<BoothTab>('bidding');
+    const [selectedBooths, setSelectedBooths] = useState<number[]>([]);
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
     
     const { biddingBooths, nonBiddingBooths } = useMemo(() => {
@@ -49,6 +52,24 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
         const nonBidding = booths.filter(b => !b.isBiddingEnabled && !(b.allowBuyout ?? false));
         return { biddingBooths: bidding, nonBiddingBooths: nonBidding };
     }, [booths]);
+
+    const displayedBooths = activeTab === 'bidding' ? biddingBooths : nonBiddingBooths;
+
+    const handleSelectAll = () => {
+        if (selectedBooths.length === displayedBooths.length) {
+            setSelectedBooths([]);
+        } else {
+            setSelectedBooths(displayedBooths.map(b => b.id));
+        }
+    };
+    
+    const handleSelectOne = (boothId: number) => {
+        setSelectedBooths(prev =>
+            prev.includes(boothId)
+                ? prev.filter(id => id !== boothId)
+                : [...prev, boothId]
+        );
+    };
 
     const handleDelete = (boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -65,8 +86,48 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
         });
     };
     
-    const displayedBooths = activeTab === 'bidding' ? biddingBooths : nonBiddingBooths;
+    const handleBulkDelete = () => {
+        setConfirmModalState({
+            isOpen: true,
+            title: `Delete ${selectedBooths.length} Booths`,
+            message: `Are you sure you want to delete the selected booths? This action cannot be undone.`,
+            onConfirm: () => {
+                bulkUpdateBooths(selectedBooths, { type: 'delete' });
+                addToast(`${selectedBooths.length} booths deleted.`, 'info');
+                setSelectedBooths([]);
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            }
+        });
+    };
 
+    const handleBulkStatusChange = (status: Booth['status']) => {
+        setConfirmModalState({
+            isOpen: true,
+            title: `Change Status for ${selectedBooths.length} Booths`,
+            message: `Are you sure you want to change the status of the selected booths to "${status}"?`,
+            onConfirm: () => {
+                bulkUpdateBooths(selectedBooths, { type: 'changeStatus', status });
+                addToast(`Status changed to "${status}" for ${selectedBooths.length} booths.`, 'success');
+                setSelectedBooths([]);
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            }
+        });
+    };
+
+    const handleBulkExtend = (hours: number) => {
+        setConfirmModalState({
+            isOpen: true,
+            title: `Extend Bidding for ${selectedBooths.length} Booths`,
+            message: `Are you sure you want to extend the bidding end time by ${hours} hour(s) for the selected booths? This only applies to booths currently open for bidding.`,
+            onConfirm: () => {
+                bulkUpdateBooths(selectedBooths, { type: 'extendBidding', hours });
+                addToast(`Bidding extended by ${hours} hour(s) for selected booths.`, 'success');
+                setSelectedBooths([]);
+                setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            }
+        });
+    };
+    
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -98,8 +159,39 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                   </nav>
                 </div>
                 
+                {selectedBooths.length > 0 && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-4 animate-fade-in">
+                        <div className="flex-shrink-0">
+                            <span className="font-semibold text-slate-800">{selectedBooths.length} booth{selectedBooths.length > 1 ? 's' : ''} selected</span>
+                        </div>
+                        <div className="flex-grow flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <div className="flex items-center gap-2">
+                                <select onChange={(e) => handleBulkStatusChange(e.target.value as Booth['status'])} value="" className="text-sm rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-1.5 bg-white text-black">
+                                    <option value="" disabled>Change status to...</option>
+                                    <option value="Open">Open</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <select onChange={(e) => handleBulkExtend(parseInt(e.target.value))} value="" className="text-sm rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-1.5 bg-white text-black">
+                                    <option value="" disabled>Extend bidding by...</option>
+                                    <option value="1">1 Hour</option>
+                                    <option value="6">6 Hours</option>
+                                    <option value="24">24 Hours</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                            <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-1.5 hover:bg-red-100 transition-colors">
+                                <TrashIcon className="w-4 h-4" />
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                )}
+                
                 {displayedBooths.length > 0 ? (
-                    <BoothTable booths={displayedBooths} onEdit={onGoToEdit} onDelete={handleDelete} onViewDetails={onViewDetails} />
+                    <BoothTable booths={displayedBooths} onEdit={onGoToEdit} onDelete={handleDelete} onViewDetails={onViewDetails} selectedBooths={selectedBooths} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} />
                 ) : (
                     <p className="text-sm text-slate-500 py-4 text-center">
                         {activeTab === 'bidding' ? 'No booths are currently available in the bidding module.' : 'No booths are currently configured for direct assignment only.'}
@@ -113,7 +205,7 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                 onConfirm={confirmModalState.onConfirm}
                 title={confirmModalState.title}
                 message={confirmModalState.message}
-                confirmText="Delete"
+                confirmText="Confirm"
             />
         </div>
     );

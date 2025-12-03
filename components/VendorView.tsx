@@ -14,7 +14,7 @@ import { BiddingContext } from '../context/BiddingContext';
 import { InfoIcon } from './icons';
 import { useToast } from '../context/ToastContext';
 import { BiddingDashboard } from './BiddingDashboard';
-import { VendorBoothDetailModal } from './VendorBoothDetailModal';
+import { VendorBoothDetailPage } from './VendorBoothDetailPage';
 import { Booth } from './BoothManagement';
 
 const TABS: Tab[] = [
@@ -60,6 +60,16 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
   };
+  
+  if (detailedBooth) {
+      return (
+        <VendorBoothDetailPage
+          booth={detailedBooth}
+          vendorName={vendorName}
+          onBack={() => setDetailedBooth(null)}
+        />
+      )
+  }
 
   return (
     <div className="space-y-6">
@@ -93,13 +103,6 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
         {activeTab === 'Terms and Conditions' && <TermsAndConditionsSection />}
         {activeTab === 'Invoice/Payment' && <InvoicePaymentSection />}
       </div>
-
-      <VendorBoothDetailModal
-          isOpen={!!detailedBooth}
-          onClose={() => setDetailedBooth(null)}
-          booth={detailedBooth}
-          vendorName={vendorName}
-      />
     </div>
   );
 };

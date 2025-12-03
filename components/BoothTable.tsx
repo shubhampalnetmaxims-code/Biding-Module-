@@ -9,6 +9,9 @@ interface BoothTableProps {
     onEdit: (booth: Booth) => void;
     onDelete: (boothId: number) => void;
     onViewDetails: (boothId: number) => void;
+    selectedBooths: number[];
+    onSelectAll: () => void;
+    onSelectOne: (boothId: number) => void;
 }
 
 const getStatusBadgeClass = (status: Booth['status']) => {
@@ -37,10 +40,12 @@ const formatDate = (dateString: string) => {
     }
 };
 
-export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete, onViewDetails }) => {
+export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete, onViewDetails, selectedBooths, onSelectAll, onSelectOne }) => {
     const { buyoutRequests } = useContext(BiddingContext);
     
-    const getRowClass = (booth: Booth) => {
+    const getRowClass = (booth: Booth, isSelected: boolean) => {
+        if (isSelected) return 'bg-pink-50 hover:bg-pink-100';
+
         const hasPendingBuyout = (buyoutRequests[booth.id] || []).length > 0;
         if (hasPendingBuyout) return 'bg-yellow-50 hover:bg-yellow-100';
         
@@ -59,6 +64,15 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
             <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                     <tr>
+                        <th scope="col" className="px-6 py-3">
+                           <input 
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-slate-300 text-pink-600 focus:ring-pink-500"
+                                checked={booths.length > 0 && selectedBooths.length === booths.length}
+                                onChange={onSelectAll}
+                                aria-label="Select all booths"
+                           />
+                        </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Booth Title</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current Bid</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
@@ -70,11 +84,21 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                     {booths.map((booth) => {
+                        const isSelected = selectedBooths.includes(booth.id);
                         const hasPendingBuyout = (buyoutRequests[booth.id] || []).length > 0;
                         const isAwaitingPayment = booth.paymentSubmitted && !booth.paymentConfirmed;
                         
                         return (
-                            <tr key={booth.id} className={`${getRowClass(booth)} transition-colors`}>
+                            <tr key={booth.id} className={`${getRowClass(booth, isSelected)} transition-colors`}>
+                                <td className="px-6 py-4">
+                                    <input 
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-slate-300 text-pink-600 focus:ring-pink-500"
+                                        checked={isSelected}
+                                        onChange={() => onSelectOne(booth.id)}
+                                        aria-label={`Select booth ${booth.title}`}
+                                    />
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                                     <div className="flex items-center gap-2">
                                         <span onClick={() => onViewDetails(booth.id)} className="cursor-pointer hover:text-pink-600 hover:underline">
