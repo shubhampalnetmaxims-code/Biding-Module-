@@ -1,6 +1,28 @@
 import React, { createContext, useState, ReactNode, useCallback } from 'react';
 import { Booth } from '../components/BoothManagement';
 
+// FIX: Add and export VENDOR_DETAILS with mock data to resolve import error in BoothDetails.tsx.
+export const VENDOR_DETAILS = {
+    'Vendor 1': {
+      businessName: 'Gourmet Coffee Inc.',
+      contactPerson: 'Alice Johnson',
+      email: 'alice.j@gourmetcoffee.com',
+      phone: '+1 (555) 111-2222'
+    },
+    'Vendor 2': {
+      businessName: 'Crafty Creations',
+      contactPerson: 'Bob Williams',
+      email: 'bob.w@craftycreations.co',
+      phone: '+1 (555) 333-4444'
+    },
+    'Vendor 3': {
+      businessName: 'Jewels by Jane',
+      contactPerson: 'Jane Doe',
+      email: 'jane.d@jewels.com',
+      phone: '+1 (555) 555-6666'
+    }
+};
+
 // --- DYNAMIC DATE HELPERS ---
 const now = new Date();
 const futureDate = (days: number, hours: number = 0, minutes: number = 0) => new Date(now.getTime() + days * 24 * 60 * 60 * 1000 + hours * 60 * 60 * 1000 + minutes * 60 * 1000).toISOString();
@@ -9,16 +31,18 @@ const pastDate = (days: number, hours: number = 0) => new Date(now.getTime() - d
 
 // --- INITIAL MOCK DATA ---
 const initialBoothsData: Booth[] = [
-    { id: 1, title: 'Food Stall A1', type: 'Food', size: '10x20', status: 'Open', location: 'Zone A', basePrice: 500, buyOutPrice: 1000, bidEndDate: futureDate(2, 4), description: 'Premium spot near the main stage.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 650, hideBiddingPrice: true },
-    { id: 2, title: 'Craft Corner B3', type: 'Exhibitor', size: '10x10', status: 'Closed', location: 'Zone B', basePrice: 250, buyOutPrice: 600, bidEndDate: pastDate(2), description: 'Corner booth with high foot traffic.', increment: 25, buyoutMethod: 'Direct pay', hideBiddingPrice: false },
-    { id: 3, title: 'Info Point C2', type: 'Sponsors', size: '10x10', status: 'Sold', location: 'Zone C', basePrice: 100, buyOutPrice: 300, bidEndDate: pastDate(5), description: 'Central location, ideal for services.', increment: 10, buyoutMethod: 'Admin approve', winner: 'Vendor 2', currentBid: 120, paymentSubmitted: true, paymentConfirmed: true, hideBiddingPrice: false },
-    { id: 4, title: 'Artisan Row A2', type: 'Exhibitor', size: '10x10', status: 'Open', location: 'Zone A', basePrice: 300, buyOutPrice: 750, bidEndDate: futureDate(4, 18), description: 'Excellent visibility on the main walkway.', increment: 25, buyoutMethod: 'Direct pay', currentBid: 325, hideBiddingPrice: false },
-    { id: 5, title: 'Taco Truck Fiesta', type: 'Food', size: '10x20', status: 'Open', location: 'Food Court', basePrice: 700, buyOutPrice: 1500, bidEndDate: futureDate(15), description: 'Large space suitable for a food truck.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 750, hideBiddingPrice: true },
-    { id: 6, title: 'Handmade Jewelry', type: 'Exhibitor', size: '10x10', status: 'Open', location: 'Artisan Row', basePrice: 200, buyOutPrice: 500, bidEndDate: futureDate(3, 19), description: 'Small booth perfect for delicate items.', increment: 20, buyoutMethod: 'Direct pay', currentBid: 220, hideBiddingPrice: false },
-    { id: 7, title: 'Local Charity Info', type: 'Sponsors', size: '10x10', status: 'Open', location: 'Community Zone', basePrice: 50, buyOutPrice: 150, bidEndDate: futureDate(1, 1), description: 'Discounted rate for non-profits.', increment: 5, buyoutMethod: 'Admin approve', hideBiddingPrice: true },
-    { id: 8, title: 'Gourmet Coffee Cart', type: 'Food', size: '10x10', status: 'Sold', location: 'Entrance', basePrice: 400, buyOutPrice: 900, bidEndDate: pastDate(1), description: 'High traffic area near the main entrance.', increment: 25, buyoutMethod: 'Direct pay', winner: 'Vendor 1', currentBid: 500, paymentSubmitted: true, paymentConfirmed: false, hideBiddingPrice: false },
-    { id: 9, title: 'Pop-up Gallery D1', type: 'Exhibitor', size: '10x15', status: 'Open', location: 'Artisan Row', basePrice: 350, buyOutPrice: 800, bidEndDate: futureDate(4, 2), description: 'Spacious booth for art displays.', increment: 25, buyoutMethod: 'Admin approve', currentBid: 375, hideBiddingPrice: false },
-    { id: 10, title: 'Mobile Cafe Spot', type: 'Food', size: '10x10', status: 'Open', location: 'Entrance', basePrice: 450, buyOutPrice: 1100, bidEndDate: futureDate(0, 10), description: 'Prime location for a mobile cafe.', increment: 50, buyoutMethod: 'Direct pay', currentBid: 550, hideBiddingPrice: true },
+    { id: 1, title: 'Food Stall A1', type: 'Food', size: '10x20', status: 'Open', location: 'Zone A', basePrice: 500, buyOutPrice: 1000, bidEndDate: futureDate(2, 4), description: 'Premium spot near the main stage.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 650, hideBiddingPrice: true, hideIncrementValue: false, isBiddingEnabled: true, allowBuyout: true },
+    { id: 2, title: 'Craft Corner B3', type: 'Exhibitor', size: '10x10', status: 'Closed', location: 'Zone B', basePrice: 250, buyOutPrice: 600, bidEndDate: pastDate(2), description: 'Corner booth with high foot traffic.', increment: 25, buyoutMethod: 'Direct pay', hideBiddingPrice: false, hideIncrementValue: true, isBiddingEnabled: true, allowBuyout: false },
+    { id: 3, title: 'Info Point C2', type: 'Sponsors', size: '10x10', status: 'Sold', location: 'Zone C', basePrice: 100, buyOutPrice: 300, bidEndDate: pastDate(5), description: 'Central location, ideal for services.', increment: 10, buyoutMethod: 'Admin approve', winner: 'Vendor 2', currentBid: 120, winningCircuits: 0, paymentSubmitted: true, paymentConfirmed: true, hideBiddingPrice: false, isBiddingEnabled: true, allowBuyout: true },
+    { id: 4, title: 'Artisan Row A2', type: 'Exhibitor', size: '10x10', status: 'Open', location: 'Zone A', basePrice: 300, buyOutPrice: 750, bidEndDate: futureDate(4, 18), description: 'Excellent visibility on the main walkway.', increment: 25, buyoutMethod: 'Direct pay', currentBid: 325, hideBiddingPrice: false, isBiddingEnabled: true, allowBuyout: true },
+    { id: 5, title: 'Taco Truck Fiesta', type: 'Food', size: '10x20', status: 'Open', location: 'Food Court', basePrice: 700, buyOutPrice: 1500, bidEndDate: futureDate(15), description: 'Large space suitable for a food truck.', increment: 50, buyoutMethod: 'Admin approve', currentBid: 750, hideBiddingPrice: true, hideIncrementValue: true, isBiddingEnabled: true, allowBuyout: true },
+    { id: 6, title: 'Handmade Jewelry', type: 'Exhibitor', size: '10x10', status: 'Open', location: 'Artisan Row', basePrice: 200, buyOutPrice: 500, bidEndDate: futureDate(3, 19), description: 'Small booth perfect for delicate items.', increment: 20, buyoutMethod: 'Direct pay', currentBid: 220, hideBiddingPrice: false, isBiddingEnabled: true, allowBuyout: true },
+    { id: 7, title: 'Local Charity Info', type: 'Sponsors', size: '10x10', status: 'Open', location: 'Community Zone', basePrice: 50, buyOutPrice: 150, bidEndDate: futureDate(1, 1), description: 'Discounted rate for non-profits.', increment: 5, buyoutMethod: 'Admin approve', hideBiddingPrice: true, isBiddingEnabled: false, allowDirectAssignment: true },
+    { id: 8, title: 'Gourmet Coffee Cart', type: 'Food', size: '10x10', status: 'Sold', location: 'Entrance', basePrice: 400, buyOutPrice: 900, bidEndDate: pastDate(1), description: 'High traffic area near the main entrance.', increment: 25, buyoutMethod: 'Direct pay', winner: 'Vendor 1', currentBid: 500, winningCircuits: 1, paymentSubmitted: true, paymentConfirmed: false, hideBiddingPrice: false, isBiddingEnabled: true, allowBuyout: true },
+    { id: 9, title: 'Pop-up Gallery D1', type: 'Exhibitor', size: '10x15', status: 'Open', location: 'Artisan Row', basePrice: 350, buyOutPrice: 800, bidEndDate: futureDate(4, 2), description: 'Spacious booth for art displays.', increment: 25, buyoutMethod: 'Admin approve', currentBid: 375, hideBiddingPrice: false, isBiddingEnabled: true, allowBuyout: true },
+    { id: 10, title: 'Mobile Cafe Spot', type: 'Food', size: '10x10', status: 'Open', location: 'Entrance', basePrice: 450, buyOutPrice: 1100, bidEndDate: futureDate(0, 10), description: 'Prime location for a mobile cafe.', increment: 50, buyoutMethod: 'Direct pay', currentBid: 550, hideBiddingPrice: true, isBiddingEnabled: true, allowBuyout: true },
+    { id: 11, title: 'Pre-assigned Booth', type: 'Exhibitor', size: '10x10', status: 'Closed', location: 'Zone D', basePrice: 400, buyOutPrice: 0, bidEndDate: '', description: 'A booth available for direct assignment by an admin.', increment: 0, buyoutMethod: 'Admin approve', isBiddingEnabled: false, allowDirectAssignment: true },
+    { id: 12, title: 'Sponsorship Banner Space', type: 'Sponsors', size: '20x5', status: 'Closed', location: 'Main Stage', basePrice: 1000, buyOutPrice: 0, bidEndDate: '', description: 'Banner space for sponsors, assignable by admin.', increment: 0, buyoutMethod: 'Admin approve', isBiddingEnabled: false, allowDirectAssignment: true },
 ];
 
 const initialLocationsData = Array.from(new Set(initialBoothsData.map(b => b.location)));
@@ -95,6 +119,7 @@ const initialUserBidsData: UserBids = {
 interface Notification {
     title: string;
     message: string;
+    type: 'system' | 'broadcast';
 }
 interface AllNotifications {
     [vendorName: string]: Notification[];
@@ -113,6 +138,11 @@ interface Watchlist {
     [vendorName: string]: Set<number>;
 }
 
+interface BroadcastMessage {
+    message: string;
+    timestamp: string;
+}
+
 interface BiddingContextType {
     booths: Booth[];
     bids: AllBids;
@@ -121,8 +151,9 @@ interface BiddingContextType {
     locations: string[];
     buyoutRequests: AllBuyoutRequests;
     watchlist: Watchlist;
-    circuitSelections: { [vendorName: string]: number };
-    setCircuitSelection: (vendorName: string, circuits: number) => void;
+    broadcastHistory: BroadcastMessage[];
+    goToEditBooth: (booth: Booth) => void;
+    setGoToEditBooth: (fn: (booth: Booth) => void) => void;
     toggleWatchlist: (vendorName: string, boothId: number) => void;
     addLocation: (location: string) => void;
     deleteLocation: (location: string) => void;
@@ -138,6 +169,9 @@ interface BiddingContextType {
     submitPayment: (boothId: number) => void;
     confirmPayment: (boothId: number) => void;
     revokeBid: (boothId: number) => void;
+    assignBoothToVendor: (boothId: number, vendorName: string) => void;
+    unassignBooth: (boothId: number) => void;
+    notifyAllVendors: (message: string) => void;
 }
 
 export const BiddingContext = createContext<BiddingContextType>(null!);
@@ -149,24 +183,15 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [notifications, setNotifications] = useState<AllNotifications>({ 'admin': [] });
     const [locations, setLocations] = useState<string[]>(initialLocationsData);
     const [buyoutRequests, setBuyoutRequests] = useState<AllBuyoutRequests>({});
+    const [broadcastHistory, setBroadcastHistory] = useState<BroadcastMessage[]>([]);
+    const [goToEditBooth, setGoToEditBooth] = useState<(booth: Booth) => void>(() => () => {});
+    
     const [watchlist, setWatchlist] = useState<Watchlist>({
         'Vendor 1': new Set([4]),
         'Vendor 2': new Set([6]),
         'Vendor 3': new Set([1]),
     });
-    const [circuitSelections, setCircuitSelections] = useState<{ [vendorName: string]: number }>({
-        'Vendor 1': 0,
-        'Vendor 2': 0,
-        'Vendor 3': 0,
-    });
-
-    const setCircuitSelection = useCallback((vendorName: string, circuits: number) => {
-        setCircuitSelections(prev => ({
-            ...prev,
-            [vendorName]: circuits,
-        }));
-    }, []);
-
+    
     const toggleWatchlist = useCallback((vendorName: string, boothId: number) => {
         setWatchlist(prev => {
             const newWatchlist = { ...prev };
@@ -185,10 +210,10 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         });
     }, []);
 
-    const addNotification = useCallback((vendorName: string, title: string, message: string) => {
+    const addNotification = useCallback((vendorName: string, title: string, message: string, type: Notification['type'] = 'system') => {
         setNotifications(prev => ({
             ...prev,
-            [vendorName]: [...(prev[vendorName] || []), { title, message }]
+            [vendorName]: [...(prev[vendorName] || []), { title, message, type }]
         }));
     }, []);
     
@@ -213,8 +238,8 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             return b && b.status === 'Open';
         }).length;
 
-        if(openBidsCount >= 3 && !hasAlreadyBid) {
-            return { success: false, message: "You can only bid on a maximum of 3 open booths." };
+        if (openBidsCount >= 3 && !hasAlreadyBid) {
+            return { success: false, message: "Bidding limit reached." };
         }
 
         const newBid: Bid = { id: Date.now(), vendorName, bidAmount: amount, circuits, timestamp: new Date().toISOString() };
@@ -248,41 +273,26 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         const previousHighestBidderWasThisVendor = booth.currentBid === (userBids[vendorName]?.[boothId]?.bidAmount);
 
-        // --- Update `bids` (the detailed history) ---
         const remainingBids = (bids[boothId] || []).filter(b => b.vendorName !== vendorName);
-        setBids(prev => ({
-            ...prev,
-            [boothId]: remainingBids
-        }));
+        setBids(prev => ({ ...prev, [boothId]: remainingBids }));
 
-        // --- Update `userBids` (the summary) ---
         setUserBids(prev => {
-            const newUserBids = JSON.parse(JSON.stringify(prev)); // Deep copy
-            if (newUserBids[vendorName]) {
-                delete newUserBids[vendorName][boothId];
-            }
+            const newUserBids = JSON.parse(JSON.stringify(prev));
+            if (newUserBids[vendorName]) delete newUserBids[vendorName][boothId];
             return newUserBids;
         });
 
-        // --- Update `booths` and find new highest bid ---
         const newHighestBidderDetails = remainingBids.length > 0
             ? remainingBids.reduce((max, bid) => bid.bidAmount > max.bidAmount ? bid : max, remainingBids[0])
             : null;
 
         setBooths(prev => prev.map(b => {
-            if (b.id === boothId) {
-                return { ...b, currentBid: newHighestBidderDetails ? newHighestBidderDetails.bidAmount : undefined };
-            }
+            if (b.id === boothId) return { ...b, currentBid: newHighestBidderDetails ? newHighestBidderDetails.bidAmount : undefined };
             return b;
         }));
 
-        // --- Notify new highest bidder ---
         if (newHighestBidderDetails && previousHighestBidderWasThisVendor && newHighestBidderDetails.vendorName !== vendorName) {
-            addNotification(
-                newHighestBidderDetails.vendorName,
-                "You are now the highest bidder!",
-                `The previous high bidder for "${booth.title}" has removed their bid. You are now the leading bidder with a bid of $${newHighestBidderDetails.bidAmount.toFixed(2)}.`
-            );
+            addNotification(newHighestBidderDetails.vendorName, "You are now the highest bidder!", `The previous high bidder for "${booth.title}" has removed their bid. You are now the leading bidder with a bid of $${newHighestBidderDetails.bidAmount.toFixed(2)}.`);
         }
 
         return { success: true, message: `Your bid for "${booth.title}" has been successfully removed.` };
@@ -293,11 +303,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (!booth) return;
         const newRequest: BuyoutRequest = { vendorName, circuits, timestamp: new Date().toISOString() };
         
-        setBuyoutRequests(prev => ({
-            ...prev,
-            [boothId]: [...(prev[boothId] || []), newRequest]
-        }));
-        
+        setBuyoutRequests(prev => ({ ...prev, [boothId]: [...(prev[boothId] || []), newRequest] }));
         addNotification('admin', 'Buy Out Request', `${vendorName} has requested to buy out "${booth.title}" for $${booth.buyOutPrice.toFixed(2)} (plus circuit costs).`);
     }, [booths, addNotification]);
 
@@ -312,7 +318,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         setBooths(prev => prev.map(b => 
             b.id === boothId 
-                ? { ...b, status: 'Sold', winner: winnerName, currentBid: totalPayable, paymentSubmitted: false, paymentConfirmed: false }
+                ? { ...b, status: 'Sold', winner: winnerName, currentBid: booth.buyOutPrice, winningCircuits: winningRequest.circuits, paymentSubmitted: false, paymentConfirmed: false }
                 : b
         ));
 
@@ -322,21 +328,10 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             return newRequests;
         });
 
-        addNotification(
-            winnerName,
-            'Congratulations! Your Buyout Was Approved!',
-            `Your buyout request for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`
-        );
+        addNotification(winnerName, 'Congratulations! Your Buyout Was Approved!', `Your buyout request for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`);
         
-        // Notify other vendors who requested a buyout for this booth
         requests.forEach(req => {
-            if (req.vendorName !== winnerName) {
-                addNotification(
-                    req.vendorName,
-                    'Update on Your Buyout Request',
-                    `The booth "${booth.title}" has been sold to another vendor. Thank you for your interest.`
-                );
-            }
+            if (req.vendorName !== winnerName) addNotification( req.vendorName, 'Update on Your Buyout Request', `The booth "${booth.title}" has been sold to another vendor. Thank you for your interest.`);
         });
     }, [booths, buyoutRequests, addNotification]);
 
@@ -345,30 +340,10 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const booth = booths.find(b => b.id === boothId);
         if (!booth || booth.status !== 'Open') return;
         
-        setBooths(prev => prev.map(b => 
-            b.id === boothId 
-                ? { 
-                    ...b, 
-                    status: 'Sold', 
-                    winner: vendorName, 
-                    currentBid: b.buyOutPrice, 
-                    paymentSubmitted: true, 
-                    paymentConfirmed: true 
-                  }
-                : b
-        ));
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: vendorName, currentBid: b.buyOutPrice, winningCircuits: circuits, paymentSubmitted: true, paymentConfirmed: true } : b));
         
-        addNotification(
-            vendorName, 
-            'Purchase Successful!', 
-            `You have successfully purchased "${booth.title}" for $${booth.buyOutPrice.toFixed(2)}. Your payment is confirmed.`
-        );
-        
-        addNotification(
-            'admin', 
-            'Booth Sold (Direct Pay)', 
-            `"${booth.title}" has been sold to ${vendorName} for $${booth.buyOutPrice.toFixed(2)} via direct payment.`
-        );
+        addNotification(vendorName, 'Purchase Successful!', `You have successfully purchased "${booth.title}" for $${booth.buyOutPrice.toFixed(2)}. Your payment is confirmed.`);
+        addNotification('admin', 'Booth Sold (Direct Pay)', `"${booth.title}" has been sold to ${vendorName} for $${booth.buyOutPrice.toFixed(2)} via direct payment.`);
     }, [booths, addNotification]);
 
     const confirmBid = useCallback((boothId: number, winningBidId: number) => {
@@ -378,52 +353,27 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const boothBids = bids[boothId] || [];
         const winningBid = boothBids.find(b => b.id === winningBidId);
 
-        if (!winningBid) {
-            console.error("Winning bid not found!");
-            return;
-        }
+        if (!winningBid) return;
 
         const winnerName = winningBid.vendorName;
         const totalPayable = winningBid.bidAmount + (winningBid.circuits * 60);
 
-        setBooths(prev => prev.map(b => 
-            b.id === boothId 
-                ? { ...b, status: 'Sold', winner: winnerName, currentBid: winningBid.bidAmount, paymentSubmitted: false, paymentConfirmed: false }
-                : b
-        ));
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: winnerName, currentBid: winningBid.bidAmount, winningCircuits: winningBid.circuits, paymentSubmitted: false, paymentConfirmed: false } : b));
 
-        addNotification(
-            winnerName,
-            'Congratulations! You Won a Bid!',
-            `Your bid for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`
-        );
+        addNotification(winnerName, 'Congratulations! You Won a Bid!', `Your bid for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`);
         
-        const losingBidders: Set<string> = new Set(boothBids
-            .filter(b => b.vendorName !== winnerName)
-            .map(b => b.vendorName)
-        );
-        
-        losingBidders.forEach(loserName => {
-            addNotification(
-                loserName,
-                'Update on Your Bid',
-                `The auction for the booth "${booth.title}" has now closed. Thank you for your participation.`
-            );
-        });
+        const losingBidders: Set<string> = new Set(boothBids.filter(b => b.vendorName !== winnerName).map(b => b.vendorName));
+        losingBidders.forEach(loserName => addNotification(loserName, 'Update on Your Bid', `The auction for the booth "${booth.title}" has now closed. Thank you for your participation.`));
     }, [booths, bids, addNotification]);
 
     const submitPayment = useCallback((boothId: number) => {
-        setBooths(prev => prev.map(b => 
-            b.id === boothId ? { ...b, paymentSubmitted: true } : b
-        ));
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, paymentSubmitted: true } : b));
     }, []);
 
     const confirmPayment = useCallback((boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if(booth && booth.winner) {
-             setBooths(prev => prev.map(b => 
-                b.id === boothId ? { ...b, paymentConfirmed: true } : b
-            ));
+             setBooths(prev => prev.map(b => b.id === boothId ? { ...b, paymentConfirmed: true } : b));
             addNotification(booth.winner, 'Payment Confirmed!', `Your payment for "${booth.title}" has been successfully confirmed by the administrator.`);
         }
     }, [booths, addNotification]);
@@ -434,7 +384,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             const revokedWinner = booth.winner;
             setBooths(prev => prev.map(b => {
                 if (b.id === boothId) {
-                    const { winner, currentBid, paymentConfirmed, paymentSubmitted, ...rest } = b;
+                    const { winner, currentBid, paymentConfirmed, paymentSubmitted, winningCircuits, ...rest } = b;
                     return { ...rest, status: 'Open', currentBid: b.basePrice };
                 }
                 return b;
@@ -442,6 +392,37 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             addNotification(revokedWinner, 'Bid Revoked', `Unfortunately, your winning bid for "${booth.title}" has been revoked by the administrator. Please contact them for more details.`);
         }
     }, [booths, addNotification]);
+
+    const assignBoothToVendor = useCallback((boothId: number, vendorName: string) => {
+        const boothToAssign = booths.find(b => b.id === boothId);
+        if (!boothToAssign) return;
+
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: vendorName, currentBid: b.basePrice, paymentSubmitted: true, paymentConfirmed: true, winningCircuits: 0 } : b));
+        addNotification(vendorName, 'Booth Assigned to You', `The administrator has assigned booth "${boothToAssign.title}" to you.`);
+    }, [booths, addNotification]);
+
+    const unassignBooth = useCallback((boothId: number) => {
+        const boothToUnassign = booths.find(b => b.id === boothId);
+        if (boothToUnassign && boothToUnassign.winner) {
+            const unassignedWinner = boothToUnassign.winner;
+            setBooths(prev => prev.map(b => {
+                if (b.id === boothId) {
+                    const { winner, currentBid, paymentConfirmed, paymentSubmitted, winningCircuits, ...rest } = b;
+                    return { ...rest, status: 'Open', currentBid: undefined };
+                }
+                return b;
+            }));
+            addNotification(unassignedWinner, 'Booth Unassigned', `The booth "${boothToUnassign.title}" has been unassigned from you by the administrator.`);
+        }
+    }, [booths, addNotification]);
+    
+    const notifyAllVendors = useCallback((message: string) => {
+        const VENDORS = ['Vendor 1', 'Vendor 2', 'Vendor 3'];
+        VENDORS.forEach(vendor => {
+            addNotification(vendor, 'Admin Broadcast', message, 'broadcast');
+        });
+        setBroadcastHistory(prev => [...prev, { message, timestamp: new Date().toISOString() }]);
+    }, [addNotification]);
 
     const addBooth = useCallback((boothData: Omit<Booth, 'id'>) => {
         const newBooth: Booth = { ...boothData, id: Date.now() };
@@ -464,13 +445,12 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     const deleteLocation = useCallback((locationToDelete: string) => {
         setLocations(prev => prev.filter(loc => loc !== locationToDelete));
-        // Optional: Also handle what happens to booths with this location
         setBooths(prev => prev.map(b => b.location === locationToDelete ? { ...b, location: '' } : b));
     }, []);
 
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, circuitSelections, setCircuitSelection, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
             {children}
         </BiddingContext.Provider>
     );

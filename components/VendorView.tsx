@@ -47,7 +47,7 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
   const { addToast } = useToast();
   const [detailedBooth, setDetailedBooth] = useState<Booth | null>(null);
   
-  const vendorNotifications = notifications[vendorName] || [];
+  const vendorNotifications = (notifications[vendorName] || []).filter(n => n.type === 'system');
   const prevNotifications = usePrevious(vendorNotifications);
 
   useEffect(() => {
@@ -66,8 +66,8 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
       <EventHeader />
       {vendorNotifications.length > 0 && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-md shadow-md space-y-3" role="alert">
-            {vendorNotifications.map((note, index) => (
-                <div key={index} className="flex">
+            {vendorNotifications.slice(-3).reverse().map((note, index) => (
+                <div key={index} className="flex animate-fade-in">
                     <div className="py-1 flex-shrink-0"><InfoIcon className="h-5 w-5 text-yellow-500 mr-3" /></div>
                     <div>
                         <p className="font-bold">{note.title}</p>

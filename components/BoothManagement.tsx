@@ -17,11 +17,17 @@ export interface Booth {
     description: string;
     increment: number;
     buyoutMethod: 'Direct pay' | 'Admin approve';
+    isBiddingEnabled: boolean;
+    allowBuyout?: boolean;
     hideBiddingPrice?: boolean;
+    hideIncrementValue?: boolean;
+    circuitLimit?: number;
+    allowDirectAssignment?: boolean;
     winner?: string;
     currentBid?: number;
     paymentConfirmed?: boolean;
     paymentSubmitted?: boolean;
+    winningCircuits?: number;
 }
 
 interface BoothManagementProps {
@@ -30,53 +36,18 @@ interface BoothManagementProps {
     onGoToEdit: (booth: Booth) => void;
 }
 
+type BoothTab = 'bidding' | 'nonBidding';
+
 export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails, onGoToCreate, onGoToEdit }) => {
-    const { booths, bids, buyoutRequests, deleteBooth } = useContext(BiddingContext);
+    const { booths, deleteBooth } = useContext(BiddingContext);
+    const [activeTab, setActiveTab] = useState<BoothTab>('bidding');
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-    const [filters, setFilters] = useState({
-        location: 'All',
-        status: 'All',
-        buyoutMethod: 'All',
-        specialStatus: 'All',
-    });
-     const [sortOption, setSortOption] = useState('default');
-
-    const locations = ['All', ...Array.from(new Set(booths.map(b => b.location)))];
-    const statuses: Array<'All' | Booth['status']> = ['All', 'Open', 'Closed', 'Sold'];
-
-    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-    };
     
-    const filteredAndSortedBooths = useMemo(() => {
-        let filtered = booths.filter(booth => {
-            const locationMatch = filters.location === 'All' || booth.location === filters.location;
-            const statusMatch = filters.status === 'All' || booth.status === filters.status;
-            const buyoutMethodMatch = filters.buyoutMethod === 'All' || booth.buyoutMethod === filters.buyoutMethod;
-            
-            let specialStatusMatch = true;
-            if(filters.specialStatus === 'pendingBuyout') {
-                specialStatusMatch = (buyoutRequests[booth.id] || []).length > 0;
-            } else if (filters.specialStatus === 'awaitingPayment') {
-                specialStatusMatch = booth.paymentSubmitted === true && booth.paymentConfirmed === false;
-            }
-            
-            return locationMatch && statusMatch && buyoutMethodMatch && specialStatusMatch;
-        });
-
-        return filtered.sort((a, b) => {
-            switch(sortOption) {
-                case 'bidCount':
-                    return (bids[b.id]?.length || 0) - (bids[a.id]?.length || 0);
-                case 'currentBid':
-                    return (b.currentBid || b.basePrice) - (a.currentBid || a.basePrice);
-                default:
-                    return 0; // Or default sort by ID, etc.
-            }
-        });
-
-    }, [booths, filters, sortOption, bids, buyoutRequests]);
+    const { biddingBooths, nonBiddingBooths } = useMemo(() => {
+        const bidding = booths.filter(b => b.isBiddingEnabled);
+        const nonBidding = booths.filter(b => !b.isBiddingEnabled);
+        return { biddingBooths: bidding, nonBiddingBooths: nonBidding };
+    }, [booths]);
 
     const handleDelete = (boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -92,10 +63,12 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
             }
         });
     };
+    
+    const displayedBooths = activeTab === 'bidding' ? biddingBooths : nonBiddingBooths;
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-slate-900">Booth Management</h2>
                 <button 
                     onClick={onGoToCreate}
@@ -106,49 +79,32 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                 </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                {/* Filters */}
-                <div>
-                    <label htmlFor="location-filter" className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                    <select id="location-filter" name="location" value={filters.location} onChange={handleFilterChange} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
-                        {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                    </select>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="border-b border-slate-200 mb-4">
+                  <nav className="-mb-px flex gap-x-6" aria-label="Tabs">
+                    <button
+                        onClick={() => setActiveTab('bidding')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'bidding' ? 'border-pink-500 text-pink-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+                    >
+                        Booths Open for Bidding ({biddingBooths.length})
+                    </button>
+                     <button
+                        onClick={() => setActiveTab('nonBidding')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'nonBidding' ? 'border-pink-500 text-pink-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+                    >
+                        Booths Not for Bidding ({nonBiddingBooths.length})
+                    </button>
+                  </nav>
                 </div>
-                 <div>
-                    <label htmlFor="status-filter" className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select id="status-filter" name="status" value={filters.status} onChange={handleFilterChange} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
-                        {statuses.map(status => <option key={status} value={status}>{status}</option>)}
-                    </select>
-                </div>
-                 <div>
-                    <label htmlFor="buyoutMethod-filter" className="block text-sm font-medium text-slate-700 mb-1">Buyout Method</label>
-                    <select id="buyoutMethod-filter" name="buyoutMethod" value={filters.buyoutMethod} onChange={handleFilterChange} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
-                        <option value="All">All</option>
-                        <option value="Admin approve">Admin approve</option>
-                        <option value="Direct pay">Direct pay</option>
-                    </select>
-                </div>
-                 <div>
-                    <label htmlFor="specialStatus-filter" className="block text-sm font-medium text-slate-700 mb-1">Special Status</label>
-                    <select id="specialStatus-filter" name="specialStatus" value={filters.specialStatus} onChange={handleFilterChange} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
-                        <option value="All">All</option>
-                        <option value="pendingBuyout">Has Pending Buyouts</option>
-                        <option value="awaitingPayment">Awaiting Payment</option>
-                    </select>
-                </div>
-
-                {/* Sorting */}
-                 <div>
-                    <label htmlFor="sort-option" className="block text-sm font-medium text-slate-700 mb-1">Sort By</label>
-                    <select id="sort-option" name="sortOption" value={sortOption} onChange={(e) => setSortOption(e.target.value)} className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black">
-                        <option value="default">Default</option>
-                        <option value="bidCount">Number of Bids</option>
-                        <option value="currentBid">Current Bid Value</option>
-                    </select>
-                </div>
+                
+                {displayedBooths.length > 0 ? (
+                    <BoothTable booths={displayedBooths} onEdit={onGoToEdit} onDelete={handleDelete} onViewDetails={onViewDetails} />
+                ) : (
+                    <p className="text-sm text-slate-500 py-4 text-center">
+                        {activeTab === 'bidding' ? 'No booths are currently enabled for bidding.' : 'No booths are currently configured as not for bidding.'}
+                    </p>
+                )}
             </div>
-
-            <BoothTable booths={filteredAndSortedBooths} onEdit={onGoToEdit} onDelete={handleDelete} onViewDetails={onViewDetails} />
 
             <ConfirmationModal
                 isOpen={confirmModalState.isOpen}

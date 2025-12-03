@@ -5,6 +5,7 @@ import { LocationPinIcon, ClockIcon } from '../icons';
 import { ChangeBoothInfoModal } from '../ChangeBoothInfoModal';
 import { ConfirmationModal } from '../ConfirmationModal';
 import { useToast } from '../../context/ToastContext';
+import { InfoItem } from '../InfoItem';
 
 interface MyBoothsSectionProps {
     vendorName: string;
@@ -22,34 +23,34 @@ const WonBoothCard: React.FC<{ booth: Booth; onPaymentSubmit: (id: number) => vo
     };
 
     const statusBadge = getStatusBadge();
+    const finalPrice = (booth.currentBid || 0) + ((booth.winningCircuits || 0) * 60);
+    const isAwaitingPayment = !booth.paymentSubmitted && !booth.paymentConfirmed;
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
-            <div className="p-5">
-                <div className="flex justify-between items-start mb-1.5">
+            <div className="p-5 flex-grow">
+                <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold text-slate-900 pr-2">
-                        {booth.title} <span className="text-base font-medium text-slate-500">({booth.type})</span>
+                        {booth.title}
                     </h3>
                     <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadge.className}`}>
                         {statusBadge.text}
                     </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <LocationPinIcon className="w-4 h-4" />
-                    <span>{booth.location}</span>
-                </div>
-                <div className={`mt-4 bg-slate-50 rounded-lg p-3 space-y-2 text-sm`}>
-                    <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Winning Bid:</span>
-                        <span className="font-bold text-slate-800 text-base">${booth.currentBid?.toFixed(2)}</span>
+                
+                {isAwaitingPayment && (
+                    <div className="mt-4 p-3 bg-amber-50 text-amber-800 border-l-4 border-amber-400 text-sm rounded-r-lg">
+                        <p><span className="font-bold">Action Required:</span> Payment for this booth must be completed within 24 hours.</p>
                     </div>
-                    <div className="flex justify-between items-center text-slate-500 pt-1 border-t border-slate-200">
-                        <div className="flex items-center gap-1.5">
-                            <ClockIcon className="w-4 h-4" />
-                            <span>Bid Ended:</span>
-                        </div>
-                        <span className="font-medium text-slate-600">{new Date(booth.bidEndDate).toLocaleDateString()}</span>
-                    </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4 text-sm border-t border-slate-200 pt-4">
+                    <InfoItem label="Type" value={booth.type} />
+                    <InfoItem label="Size" value={booth.size} />
+                    <InfoItem label="Location" value={booth.location} />
+                    <InfoItem label="Winning Price" value={`$${booth.currentBid?.toFixed(2)}`} />
+                    <InfoItem label="Circuits Included" value={booth.winningCircuits || 0} />
+                    <InfoItem label="Final Price" value={<span className="font-bold text-pink-600">${finalPrice.toFixed(2)}</span>} />
                 </div>
             </div>
 

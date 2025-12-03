@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { SectionCard } from './SectionCard';
 import { InfoItem } from './InfoItem';
 import { ArrowLeftIcon, CheckCircleIcon } from './icons';
-import { BiddingContext, BuyoutRequest } from '../context/BiddingContext';
+import { BiddingContext, BuyoutRequest, VENDOR_DETAILS } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 import { ConfirmBidModal } from './ConfirmBidModal';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -136,12 +136,22 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                     <InfoItem label="Size" value={booth.size} />
                     <InfoItem label="Status" value={booth.status} />
                     <InfoItem label="Location" value={booth.location} />
-                    <InfoItem label="Base Price" value={`$${booth.basePrice.toFixed(2)}`} />
-                    <InfoItem label="Bid Increment" value={`$${booth.increment.toFixed(2)}`} />
-                    <InfoItem label="Buy Out Price" value={`$${booth.buyOutPrice.toFixed(2)}`} />
-                    <InfoItem label="Buyout Method" value={booth.buyoutMethod} />
-                    <InfoItem label="Bid End Date" value={formatDate(booth.bidEndDate)} />
-                    <div className="md:col-span-2">
+                    <InfoItem label="Bidding Enabled" value={booth.isBiddingEnabled ? 'Yes' : 'No'} />
+                     <InfoItem label="Buyout Enabled" value={booth.allowBuyout ? 'Yes' : 'No'} />
+                    {booth.isBiddingEnabled && (
+                        <>
+                            <InfoItem label="Base Price" value={`$${booth.basePrice.toFixed(2)}`} />
+                            <InfoItem label="Bid Increment" value={`$${booth.increment.toFixed(2)}`} />
+                            {booth.allowBuyout && <InfoItem label="Buy Out Price" value={`$${booth.buyOutPrice.toFixed(2)}`} />}
+                            {booth.allowBuyout && <InfoItem label="Buyout Method" value={booth.buyoutMethod} />}
+                            <InfoItem label="Bid End Date" value={formatDate(booth.bidEndDate)} />
+                        </>
+                    )}
+                    <InfoItem label="Circuit Limit" value={booth.circuitLimit ?? 'Unlimited'} />
+                    <InfoItem label="Direct Assignment" value={booth.allowDirectAssignment ? 'Enabled' : 'Disabled'} />
+                    <InfoItem label="Pricing Visible" value={!booth.hideBiddingPrice ? 'Yes' : 'No'} />
+                    <InfoItem label="Increment Visible" value={!booth.hideIncrementValue ? 'Yes' : 'No'} />
+                    <div className="md:col-span-full">
                         <InfoItem label="Description" value={booth.description} />
                     </div>
                 </div>
@@ -226,6 +236,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                                     const totalPayable = bid.bidAmount + (bid.circuits * 60);
                                     const isSelected = selectedBid?.id === bid.id;
                                     const isWinningBid = booth.winner === bid.vendorName && booth.currentBid === bid.bidAmount;
+                                    const vendorDetails = VENDOR_DETAILS[bid.vendorName as keyof typeof VENDOR_DETAILS];
 
                                     return(
                                         <React.Fragment key={bid.id}>
@@ -247,13 +258,26 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                                                     )}
                                                 </td>
                                             </tr>
-                                            {isSelected && (
+                                            {isSelected && vendorDetails && (
                                                 <tr className="border-b border-slate-200">
                                                     <td colSpan={5} className="p-4 bg-slate-50 animate-fade-in">
-                                                        <h4 className="text-md font-bold text-slate-800 mb-3">Bid Details for {selectedBid.vendorName}</h4>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                                                            <InfoItem label="Bid Amount" value={`$${selectedBid.bidAmount.toFixed(2)}`} />
-                                                            <InfoItem label="Electrical Circuits" value={`${selectedBid.circuits} circuit(s)`} />
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                                            <div>
+                                                                <h4 className="text-md font-bold text-slate-800 mb-3">Bid Details</h4>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                                                    <InfoItem label="Bid Amount" value={`$${selectedBid.bidAmount.toFixed(2)}`} />
+                                                                    <InfoItem label="Electrical Circuits" value={`${selectedBid.circuits} circuit(s)`} />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-md font-bold text-slate-800 mb-3">Vendor Business Details</h4>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                                                    <InfoItem label="Business Name" value={vendorDetails.businessName} />
+                                                                    <InfoItem label="Contact Person" value={vendorDetails.contactPerson} />
+                                                                    <InfoItem label="Contact Email" value={vendorDetails.email} />
+                                                                    <InfoItem label="Contact Phone" value={vendorDetails.phone} />
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>

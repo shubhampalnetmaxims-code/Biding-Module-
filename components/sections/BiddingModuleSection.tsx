@@ -15,22 +15,20 @@ type SortOption = 'endingSoon' | 'bidLowHigh';
 type FilterOption = 'all' | 'myBids' | 'myWatchlist';
 
 export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vendorName, setDetailedBooth }) => {
-  const { booths, userBids, watchlist, toggleWatchlist, circuitSelections, setCircuitSelection } = useContext(BiddingContext);
+  const { booths, userBids, watchlist, toggleWatchlist } = useContext(BiddingContext);
   
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [sortOption, setSortOption] = useState<SortOption>('endingSoon');
   const [filterOption, setFilterOption] = useState<FilterOption>('all');
   const [isHowItWorksModalOpen, setIsHowItWorksModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-
-  const additionalCircuits = circuitSelections[vendorName] ?? 0;
   
   const locations = ['All', ...Array.from(new Set(booths.map(b => b.location)))];
   const vendorBidData = userBids[vendorName] || {};
   const vendorWatchlist = watchlist[vendorName] || new Set();
 
   const filteredAndSortedBooths = useMemo(() => {
-    let processedBooths = [...booths].filter(booth => booth.status === 'Open');
+    let processedBooths = [...booths].filter(booth => booth.isBiddingEnabled && booth.status === 'Open');
 
     // Location Filter
     processedBooths = processedBooths.filter(booth => selectedLocation === 'All' || booth.location === selectedLocation);
@@ -73,26 +71,6 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-bold text-pink-600 mb-4">Electrical Circuit</h3>
-        <p className="text-slate-600 text-sm mb-4">Select the number of additional 15 amp power circuits required ($60 each). This selection will apply to all bids and buyout requests you make below.</p>
-        <div className="max-w-xl">
-            <label htmlFor="circuits" className="sr-only">
-                No. of additional 15 amp power circuits required, $60 each
-            </label>
-            <select 
-                id="circuits" 
-                value={additionalCircuits} 
-                onChange={(e) => setCircuitSelection(vendorName, parseInt(e.target.value, 10))} 
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black"
-            >
-                {Array.from({ length: 21 }, (_, i) => (
-                    <option key={i} value={i}>{i}</option>
-                ))}
-            </select>
-        </div>
-      </div>
-      
       <div>
         <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md mb-6" role="alert">
             <div className="flex justify-between items-center">
@@ -198,13 +176,15 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                                 </div>
                                 <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
                             </div>
-                            <div className="flex justify-between items-center text-slate-500">
-                                <div className="flex items-center gap-1.5">
-                                    <TrendingUpIcon className="w-4 h-4" />
-                                    <span>Increment:</span>
+                            {!booth.hideIncrementValue && (
+                                <div className="flex justify-between items-center text-slate-500">
+                                    <div className="flex items-center gap-1.5">
+                                        <TrendingUpIcon className="w-4 h-4" />
+                                        <span>Increment:</span>
+                                    </div>
+                                    <span className="font-medium text-slate-600">${booth.increment.toFixed(2)}</span>
                                 </div>
-                                <span className="font-medium text-slate-600">${booth.increment.toFixed(2)}</span>
-                            </div>
+                            )}
                         </>
                       )}
                       <div className="pt-2 border-t border-slate-200">

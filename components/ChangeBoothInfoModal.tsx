@@ -14,11 +14,15 @@ export const ChangeBoothInfoModal: React.FC<ChangeBoothInfoModalProps> = ({ isOp
                 <div className="p-6 border-b border-slate-200">
                     <h3 className="text-xl font-bold text-slate-900">Change Booth Request</h3>
                 </div>
-                <div className="p-6">
+                <div className="p-6 space-y-4">
                     <p className="text-slate-700">
                         To change your booth, please contact the event administrator directly. 
                         Please provide your business name and the details of the booth you have won.
                     </p>
+                    <div className="text-sm">
+                        <p><span className="font-semibold text-slate-800">Email:</span> <a href="mailto:admin@gmail.com" className="text-blue-600 hover:underline">admin@gmail.com</a></p>
+                        <p><span className="font-semibold text-slate-800">Phone:</span> +1 (555) 123-4567</p>
+                    </div>
                 </div>
                 <div className="p-6 bg-slate-50/75 rounded-b-xl flex justify-end">
                     <button

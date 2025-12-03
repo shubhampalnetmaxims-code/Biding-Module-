@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ activeView, setView, isSidebarOp
                     )}
                     <span className="font-bold text-lg text-white">Event Dashboard</span>
                  </div>
-                 <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2 flex-wrap justify-end">
                     <NavButton onClick={() => setView('vendor1')} isActive={activeView === 'vendor1'}>Vendor 1</NavButton>
                     <NavButton onClick={() => setView('vendor2')} isActive={activeView === 'vendor2'}>Vendor 2</NavButton>
                     <NavButton onClick={() => setView('vendor3')} isActive={activeView === 'vendor3'}>Vendor 3</NavButton>

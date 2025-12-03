@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { BoothManagement } from './BoothManagement';
 import { BoothDetails } from './BoothDetails';
@@ -9,8 +9,10 @@ import { AdminDashboard } from './AdminDashboard';
 import { CreateEditBoothPage } from './CreateEditBoothPage';
 import { Booth } from './BoothManagement';
 import { Settings } from './Settings';
+import { VendorManagement } from './VendorManagement';
+import { NotifyVendors } from './NotifyVendors';
 
-export type AdminViewType = 'dashboard' | 'booths' | 'locations' | 'settings';
+export type AdminViewType = 'dashboard' | 'booths' | 'locations' | 'vendorManagement' | 'notify' | 'settings';
 
 interface AdminViewProps {
     isSidebarOpen: boolean;
@@ -21,7 +23,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSideba
     const [activeView, setActiveView] = useState<AdminViewType>('dashboard');
     const [boothViewMode, setBoothViewMode] = useState<'list' | 'details' | 'create' | 'edit'>('list');
     const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null);
-    const { booths, notifications, addBooth, updateBooth } = useContext(BiddingContext);
+    const { booths, notifications, addBooth, updateBooth, setGoToEditBooth } = useContext(BiddingContext);
     const adminNotifications = notifications['admin'] || [];
 
     const handleViewBoothDetails = (boothId: number) => {
@@ -46,7 +48,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSideba
     const handleGoToEdit = (booth: Booth) => {
         setSelectedBooth(booth);
         setBoothViewMode('edit');
+        setActiveView('booths'); // Ensure we are on the booths page
     };
+
+    useEffect(() => {
+        setGoToEditBooth(() => handleGoToEdit);
+    }, [setGoToEditBooth]);
+
 
     const handleSaveBooth = (boothData: Omit<Booth, 'id'> | Booth) => {
         if ('id' in boothData) {
@@ -70,6 +78,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSideba
                 return <AdminDashboard setActiveView={setActiveView} onViewDetails={handleViewBoothDetails} />;
             case 'locations':
                 return <LocationManagement />;
+            case 'vendorManagement':
+                return <VendorManagement />;
+            case 'notify':
+                return <NotifyVendors />;
             case 'settings':
                 return <Settings />;
             case 'booths':
