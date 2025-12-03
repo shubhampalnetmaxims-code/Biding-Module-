@@ -18,9 +18,8 @@ export const BiddingLimitModal: React.FC<BiddingLimitModalProps> = ({ isOpen, on
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-slate-900">Bidding Limit Reached</h3>
-                        <p className="mt-2 text-slate-700 whitespace-pre-wrap">
-                            You can only bid on up to 3 booths at a time.
-                            {'\n'}To place a bid on this booth, please remove your bid from any existing booth and try again.
+                        <p className="mt-2 text-slate-700">
+                            You can place a bid on 3 booths only. If you wish to place a bid here, remove any of the other bids from another booth and then try again.
                         </p>
                     </div>
                 </div>

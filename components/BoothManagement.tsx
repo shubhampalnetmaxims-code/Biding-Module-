@@ -17,6 +17,7 @@ export interface Booth {
     description: string;
     increment: number;
     buyoutMethod: 'Direct pay' | 'Admin approve';
+    biddingPaymentMethod: 'Direct pay' | 'Admin approve';
     isBiddingEnabled: boolean;
     allowBuyout?: boolean;
     hideBiddingPrice?: boolean;
@@ -44,8 +45,8 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
     
     const { biddingBooths, nonBiddingBooths } = useMemo(() => {
-        const bidding = booths.filter(b => b.isBiddingEnabled);
-        const nonBidding = booths.filter(b => !b.isBiddingEnabled);
+        const bidding = booths.filter(b => b.isBiddingEnabled || (b.allowBuyout ?? false));
+        const nonBidding = booths.filter(b => !b.isBiddingEnabled && !(b.allowBuyout ?? false));
         return { biddingBooths: bidding, nonBiddingBooths: nonBidding };
     }, [booths]);
 
@@ -86,13 +87,13 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                         onClick={() => setActiveTab('bidding')}
                         className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'bidding' ? 'border-pink-500 text-pink-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
                     >
-                        Booths Open for Bidding ({biddingBooths.length})
+                        In Bidding Module ({biddingBooths.length})
                     </button>
                      <button
                         onClick={() => setActiveTab('nonBidding')}
                         className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'nonBidding' ? 'border-pink-500 text-pink-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
                     >
-                        Booths Not for Bidding ({nonBiddingBooths.length})
+                        Direct Assignment Only ({nonBiddingBooths.length})
                     </button>
                   </nav>
                 </div>
@@ -101,7 +102,7 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                     <BoothTable booths={displayedBooths} onEdit={onGoToEdit} onDelete={handleDelete} onViewDetails={onViewDetails} />
                 ) : (
                     <p className="text-sm text-slate-500 py-4 text-center">
-                        {activeTab === 'bidding' ? 'No booths are currently enabled for bidding.' : 'No booths are currently configured as not for bidding.'}
+                        {activeTab === 'bidding' ? 'No booths are currently available in the bidding module.' : 'No booths are currently configured for direct assignment only.'}
                     </p>
                 )}
             </div>

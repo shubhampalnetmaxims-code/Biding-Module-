@@ -22,6 +22,7 @@ const initialFormData = {
     bidEndDate: '',
     description: '',
     buyoutMethod: 'Admin approve' as Booth['buyoutMethod'],
+    biddingPaymentMethod: 'Admin approve' as Booth['biddingPaymentMethod'],
     isBiddingEnabled: true,
     allowBuyout: true,
     hideBiddingPrice: false,
@@ -47,6 +48,7 @@ export const CreateEditBoothPage: React.FC<CreateEditBoothPageProps> = ({ onSave
                 location: boothToEdit.location,
                 description: boothToEdit.description,
                 buyoutMethod: boothToEdit.buyoutMethod,
+                biddingPaymentMethod: boothToEdit.biddingPaymentMethod || 'Admin approve',
                 basePrice: String(boothToEdit.basePrice),
                 buyOutPrice: String(boothToEdit.buyOutPrice),
                 increment: String(boothToEdit.increment),
@@ -84,10 +86,14 @@ export const CreateEditBoothPage: React.FC<CreateEditBoothPageProps> = ({ onSave
         
         if (formData.isBiddingEnabled) {
             if (isNaN(parseFloat(formData.basePrice)) || parseFloat(formData.basePrice) <= 0) newErrors.basePrice = "Must be a positive number";
-            if (formData.allowBuyout && (isNaN(parseFloat(formData.buyOutPrice)) || parseFloat(formData.buyOutPrice) <= 0)) newErrors.buyOutPrice = "Must be a positive number";
             if (isNaN(parseFloat(formData.increment)) || parseFloat(formData.increment) <= 0) newErrors.increment = "Must be a positive number";
             if (!formData.bidEndDate) newErrors.bidEndDate = "Bid end date is required";
         }
+
+        if (formData.allowBuyout) {
+            if (isNaN(parseFloat(formData.buyOutPrice)) || parseFloat(formData.buyOutPrice) <= 0) newErrors.buyOutPrice = "Must be a positive number";
+        }
+
 
         if (formData.circuitLimit && (isNaN(parseInt(formData.circuitLimit)) || parseInt(formData.circuitLimit) < 0)) {
             newErrors.circuitLimit = "Must be a non-negative number";
@@ -107,7 +113,7 @@ export const CreateEditBoothPage: React.FC<CreateEditBoothPageProps> = ({ onSave
                 increment: parseFloat(formData.increment) || 0,
                 circuitLimit: formData.circuitLimit ? parseInt(formData.circuitLimit) : undefined,
                 bidEndDate: formData.isBiddingEnabled ? new Date(formData.bidEndDate).toISOString() : '',
-                status: formData.isBiddingEnabled ? formData.status : 'Closed' as Booth['status'],
+                status: (formData.isBiddingEnabled || formData.allowBuyout) ? formData.status : 'Closed' as Booth['status'],
             };
 
             if (isEditing && boothToEdit) {
@@ -165,72 +171,80 @@ export const CreateEditBoothPage: React.FC<CreateEditBoothPageProps> = ({ onSave
                 </div>
 
                 {/* Section 2: Pricing & Bidding */}
-                {formData.isBiddingEnabled && (
+                {(formData.isBiddingEnabled || formData.allowBuyout) && (
                     <div className="space-y-6 animate-fade-in">
-                        <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">Pricing & Bidding</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label htmlFor="basePrice" className="block text-sm font-medium text-slate-700">Base Price ($)</label>
-                                <input type="number" name="basePrice" id="basePrice" value={formData.basePrice} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.basePrice ? 'border-red-500' : 'border-slate-300'}`} placeholder="800" />
-                                {errors.basePrice && <p className="mt-1 text-xs text-red-600">{errors.basePrice}</p>}
-                            </div>
-                            <div>
-                                <label htmlFor="increment" className="block text-sm font-medium text-slate-700">Bid Increment ($)</label>
-                                <input type="number" name="increment" id="increment" value={formData.increment} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.increment ? 'border-red-500' : 'border-slate-300'}`} placeholder="50" />
-                                {errors.increment && <p className="mt-1 text-xs text-red-600">{errors.increment}</p>}
-                            </div>
-                        </div>
-                        {formData.allowBuyout && (
-                            <div>
-                                 <label htmlFor="buyOutPrice" className="block text-sm font-medium text-slate-700">Buyout Price ($)</label>
-                                 <input type="number" name="buyOutPrice" id="buyOutPrice" value={formData.buyOutPrice} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.buyOutPrice ? 'border-red-500' : 'border-slate-300'}`} placeholder="1500" />
-                                 {errors.buyOutPrice && <p className="mt-1 text-xs text-red-600">{errors.buyOutPrice}</p>}
+                        <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">Pricing & Methods</h3>
+                        {formData.isBiddingEnabled && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label htmlFor="basePrice" className="block text-sm font-medium text-slate-700">Base Price ($)</label>
+                                        <input type="number" name="basePrice" id="basePrice" value={formData.basePrice} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.basePrice ? 'border-red-500' : 'border-slate-300'}`} placeholder="800" />
+                                        {errors.basePrice && <p className="mt-1 text-xs text-red-600">{errors.basePrice}</p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="increment" className="block text-sm font-medium text-slate-700">Bid Increment ($)</label>
+                                        <input type="number" name="increment" id="increment" value={formData.increment} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.increment ? 'border-red-500' : 'border-slate-300'}`} placeholder="50" />
+                                        {errors.increment && <p className="mt-1 text-xs text-red-600">{errors.increment}</p>}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="bidEndDate" className="block text-sm font-medium text-slate-700">Bid end date and time</label>
+                                    <input type="datetime-local" name="bidEndDate" id="bidEndDate" value={formData.bidEndDate} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.bidEndDate ? 'border-red-500' : 'border-slate-300'}`} />
+                                    {errors.bidEndDate && <p className="mt-1 text-xs text-red-600">{errors.bidEndDate}</p>}
+                                </div>
+                                <div>
+                                    <label htmlFor="biddingPaymentMethod" className="block text-sm font-medium text-slate-700">Bidding Payment Method</label>
+                                    <select id="biddingPaymentMethod" name="biddingPaymentMethod" value={formData.biddingPaymentMethod} onChange={handleChange} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2">
+                                        <option value="Admin approve">Admin approve</option>
+                                        <option value="Direct pay">Direct pay</option>
+                                    </select>
+                                </div>
                             </div>
                         )}
-                        <div>
-                            <label htmlFor="bidEndDate" className="block text-sm font-medium text-slate-700">Bid end date and time</label>
-                            <input type="datetime-local" name="bidEndDate" id="bidEndDate" value={formData.bidEndDate} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.bidEndDate ? 'border-red-500' : 'border-slate-300'}`} />
-                            {errors.bidEndDate && <p className="mt-1 text-xs text-red-600">{errors.bidEndDate}</p>}
-                        </div>
+                        {formData.allowBuyout && (
+                             <div className="space-y-6">
+                                 <div>
+                                    <label htmlFor="buyOutPrice" className="block text-sm font-medium text-slate-700">Buyout Price ($)</label>
+                                    <input type="number" name="buyOutPrice" id="buyOutPrice" value={formData.buyOutPrice} onChange={handleChange} className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 bg-white text-black ${errors.buyOutPrice ? 'border-red-500' : 'border-slate-300'}`} placeholder="1500" />
+                                    {errors.buyOutPrice && <p className="mt-1 text-xs text-red-600">{errors.buyOutPrice}</p>}
+                                 </div>
+                                <div>
+                                    <label htmlFor="buyoutMethod" className="block text-sm font-medium text-slate-700">Buyout Method</label>
+                                    <select id="buyoutMethod" name="buyoutMethod" value={formData.buyoutMethod} onChange={handleChange} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2">
+                                        <option value="Admin approve">Admin approve</option>
+                                        <option value="Direct pay">Direct pay</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
+
 
                 {/* Section 3: Configuration & Visibility */}
                 <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">Configuration & Visibility</h3>
                     <ToggleSwitch
                         label="Allow Bidding on this Booth"
-                        description="If enabled, vendors can bid on this booth. If disabled, it will not appear in the bidding module."
+                        description="Enables auction-style bidding. If disabled, vendors cannot place bids."
                         enabled={formData.isBiddingEnabled}
                         onChange={() => handleToggleChange('isBiddingEnabled')}
                     />
-                    {formData.isBiddingEnabled && (
-                        <div className="animate-fade-in space-y-6">
-                            <ToggleSwitch
-                                label="Allow Buyout for Vendors"
-                                description="If enabled, vendors can purchase this booth immediately at a fixed price."
-                                enabled={formData.allowBuyout}
-                                onChange={() => handleToggleChange('allowBuyout')}
-                            />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="status" className="block text-sm font-medium text-slate-700">Status</label>
-                                    <select id="status" name="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2">
-                                        <option>Open</option>
-                                        <option>Closed</option>
-                                        <option>Sold</option>
-                                    </select>
-                                </div>
-                                {formData.allowBuyout && (
-                                    <div>
-                                        <label htmlFor="buyoutMethod" className="block text-sm font-medium text-slate-700">Buyout Method</label>
-                                        <select id="buyoutMethod" name="buyoutMethod" value={formData.buyoutMethod} onChange={handleChange} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2">
-                                            <option value="Admin approve">Admin approve</option>
-                                            <option value="Direct pay">Direct pay</option>
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
+                    <ToggleSwitch
+                        label="Allow Buyout for Vendors"
+                        description="Enables immediate purchase at a fixed price. If both are disabled, booth is for admin assignment only."
+                        enabled={formData.allowBuyout}
+                        onChange={() => handleToggleChange('allowBuyout')}
+                    />
+                    {isEditing && (
+                        <div>
+                            <label htmlFor="status" className="block text-sm font-medium text-slate-700">Status</label>
+                            <select id="status" name="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2">
+                                <option>Open</option>
+                                <option>Closed</option>
+                                <option>Sold</option>
+                            </select>
                         </div>
                     )}
                     <div>

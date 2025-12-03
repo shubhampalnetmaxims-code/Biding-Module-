@@ -60,7 +60,7 @@ const WonBoothCard: React.FC<{ booth: Booth; onPaymentSubmit: (id: number) => vo
                         onClick={onChangeRequest}
                         className="w-full bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors shadow-sm text-sm"
                     >
-                        Change Booth
+                        HELP
                     </button>
                 ) : booth.paymentSubmitted ? (
                     <button className="w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg cursor-default shadow-sm text-sm" disabled>
@@ -78,7 +78,7 @@ const WonBoothCard: React.FC<{ booth: Booth; onPaymentSubmit: (id: number) => vo
                             onClick={onChangeRequest}
                             className="w-full bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors shadow-sm text-sm"
                         >
-                            Change Booth
+                            HELP
                         </button>
                     </div>
                 )}

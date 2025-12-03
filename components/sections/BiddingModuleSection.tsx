@@ -28,7 +28,7 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
   const vendorWatchlist = watchlist[vendorName] || new Set();
 
   const filteredAndSortedBooths = useMemo(() => {
-    let processedBooths = [...booths].filter(booth => booth.isBiddingEnabled && booth.status === 'Open');
+    let processedBooths = [...booths].filter(booth => (booth.isBiddingEnabled || booth.allowBuyout) && booth.status === 'Open');
 
     // Location Filter
     processedBooths = processedBooths.filter(booth => selectedLocation === 'All' || booth.location === selectedLocation);
@@ -154,29 +154,35 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                     <div className={`mt-4 bg-slate-50 rounded-lg p-3 space-y-2 text-sm`}>
                       {!booth.hideBiddingPrice ? (
                         <>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Current Bid:</span>
-                            <span className="font-bold text-slate-800 text-base">${highestBid.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Buy Out Price:</span>
-                            <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
-                          </div>
+                           {booth.isBiddingEnabled && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-500">Current Bid:</span>
+                                <span className="font-bold text-slate-800 text-base">${highestBid.toFixed(2)}</span>
+                            </div>
+                           )}
+                           {booth.allowBuyout && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-500">Buy Out Price:</span>
+                                <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
+                            </div>
+                           )}
                         </>
                       ) : (
                         <>
-                            <div className="flex justify-between items-center text-slate-500">
-                                <div className="flex items-center gap-1.5" title={
-                                    booth.buyoutMethod === 'Admin approve'
-                                        ? 'Admin must approve your buyout request.'
-                                        : 'Instantly purchase the booth.'
-                                }>
-                                    <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
-                                    <span>Buyout Type:</span>
+                            {booth.allowBuyout && (
+                                <div className="flex justify-between items-center text-slate-500">
+                                    <div className="flex items-center gap-1.5" title={
+                                        booth.buyoutMethod === 'Admin approve'
+                                            ? 'Admin must approve your buyout request.'
+                                            : 'Instantly purchase the booth.'
+                                    }>
+                                        <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
+                                        <span>Buyout Type:</span>
+                                    </div>
+                                    <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
                                 </div>
-                                <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
-                            </div>
-                            {!booth.hideIncrementValue && (
+                            )}
+                            {!booth.hideIncrementValue && booth.isBiddingEnabled && (
                                 <div className="flex justify-between items-center text-slate-500">
                                     <div className="flex items-center gap-1.5">
                                         <TrendingUpIcon className="w-4 h-4" />
@@ -187,9 +193,11 @@ export const BiddingModuleSection: React.FC<BiddingModuleSectionProps> = ({ vend
                             )}
                         </>
                       )}
-                      <div className="pt-2 border-t border-slate-200">
-                        <CountdownTimer endDate={booth.bidEndDate} />
-                      </div>
+                      {booth.isBiddingEnabled && (
+                        <div className="pt-2 border-t border-slate-200">
+                            <CountdownTimer endDate={booth.bidEndDate} />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="bg-slate-50/75 p-3 mt-auto rounded-b-xl text-center">

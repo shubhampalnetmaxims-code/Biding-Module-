@@ -16,8 +16,20 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClos
                 </div>
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-slate-700">
                    <div className="space-y-2">
-                     <h4 className="font-bold text-slate-800">Placing a Bid</h4>
-                     <p>To place a bid, enter an amount higher than the current minimum bid and click "Place Bid". Your bid must meet or exceed the required increment. You can bid on up to 3 booths simultaneously.</p>
+                     <h4 className="font-bold text-slate-800">Acquiring a Booth</h4>
+                     <p>Booths in the 'Bidding Module' can be acquired in different ways. The available options will be clearly displayed on each booth's detail page:</p>
+                      <ul className="list-disc list-inside pl-4 space-y-2 mt-2">
+                           <li>
+                                <span className="font-semibold">Bidding and Buyout:</span> Some booths allow you to either place a competitive bid or purchase the booth immediately at a fixed "Buyout Price".
+                           </li>
+                           <li>
+                                <span className="font-semibold">Buyout Only:</span> Some booths may only be available for immediate purchase at the "Buyout Price", without a bidding option.
+                           </li>
+                           <li>
+                                <span className="font-semibold">Bidding Only:</span> Other booths are only available through auction-style bidding, and do not have a "Buyout Price".
+                           </li>
+                       </ul>
+                       <p className="text-sm text-slate-600">Always check the booth details to see which options are available to you.</p>
                    </div>
                    <div className="space-y-2">
                         <h4 className="font-bold text-slate-800">Buyout Methods</h4>
@@ -37,8 +49,12 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClos
                         </ul>
                    </div>
                    <div className="space-y-2">
+                        <h4 className="font-bold text-slate-800">Placing a Bid</h4>
+                        <p>To place a bid, enter an amount that meets or exceeds the required increment over the current highest bid. You can bid on up to 3 booths simultaneously.</p>
+                   </div>
+                   <div className="space-y-2">
                         <h4 className="font-bold text-slate-800">Electrical Circuits</h4>
-                        <p>The number of additional electrical circuits you select at the top of the page will be included in your total cost for both regular bids and buyout requests.</p>
+                        <p>The number of additional electrical circuits you select will be included in your total cost for both winning bids and buyout purchases.</p>
                    </div>
                 </div>
                 <div className="p-6 bg-slate-50/75 rounded-b-xl flex justify-end">

@@ -47,7 +47,7 @@ export const VendorBoothDetailModal: React.FC<VendorBoothDetailModalProps> = ({ 
     
     const hasAnyPendingBuyout = booth.buyoutMethod === 'Admin approve' && (buyoutRequests[booth.id] || []).length > 0;
     const hasVendorRequestedBuyout = (buyoutRequests[booth.id] || []).some(req => req.vendorName === vendorName);
-    const isBiddingEnded = new Date(booth.bidEndDate).getTime() < new Date().getTime();
+    const isBiddingEnded = booth.isBiddingEnabled && new Date(booth.bidEndDate).getTime() < new Date().getTime();
     
     const maxCircuits = booth.circuitLimit ?? 20;
     const circuitOptions = Array.from({ length: maxCircuits + 1 }, (_, i) => i);
@@ -137,6 +137,10 @@ export const VendorBoothDetailModal: React.FC<VendorBoothDetailModalProps> = ({ 
         ? 'Admin must approve your buyout request. Bidding will be paused while requests are reviewed.' 
         : 'Instantly purchase the booth by proceeding to payment. The booth will be yours immediately.';
     
+    const showPlaceBidButton = !hasAnyPendingBuyout && booth.isBiddingEnabled;
+    const showBuyOutButton = booth.allowBuyout && !hasVendorRequestedBuyout;
+    const useTwoColumnLayout = showPlaceBidButton && showBuyOutButton;
+    
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onClick={onClose}>
@@ -154,24 +158,28 @@ export const VendorBoothDetailModal: React.FC<VendorBoothDetailModalProps> = ({ 
                         <p className="text-sm text-slate-600">{booth.description}</p>
                         
                         <div className={`bg-slate-50 rounded-lg p-3 space-y-2 text-sm`}>
-                            <div className="flex justify-between items-center">
-                                <span className="text-slate-500">Current Bid:</span>
-                                <span className="font-bold text-slate-800 text-base">${highestBid.toFixed(2)}</span>
-                            </div>
+                            {booth.isBiddingEnabled && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-500">Current Bid:</span>
+                                    <span className="font-bold text-slate-800 text-base">${highestBid.toFixed(2)}</span>
+                                </div>
+                            )}
                             {booth.allowBuyout &&
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-500">Buy Out Price:</span>
                                     <span className="font-bold text-pink-600">${booth.buyOutPrice.toFixed(2)}</span>
                                 </div>
                             }
-                            <div className="flex justify-between items-center text-slate-500">
-                                <div className="flex items-center gap-1.5" title={buyoutTooltip}>
-                                    <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
-                                    <span>Buyout Type:</span>
+                            {booth.allowBuyout && (
+                                <div className="flex justify-between items-center text-slate-500">
+                                    <div className="flex items-center gap-1.5" title={buyoutTooltip}>
+                                        <QuestionMarkCircleIcon className="w-4 h-4 cursor-help" />
+                                        <span>Buyout Type:</span>
+                                    </div>
+                                    <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
                                 </div>
-                                <span className="font-medium text-slate-600">{booth.buyoutMethod}</span>
-                            </div>
-                            {!booth.hideIncrementValue && (
+                            )}
+                            {booth.isBiddingEnabled && !booth.hideIncrementValue && (
                                 <div className="flex justify-between items-center text-slate-500">
                                     <div className="flex items-center gap-1.5">
                                         <TrendingUpIcon className="w-4 h-4" />
@@ -180,9 +188,11 @@ export const VendorBoothDetailModal: React.FC<VendorBoothDetailModalProps> = ({ 
                                     <span className="font-medium text-slate-600">${booth.increment.toFixed(2)}</span>
                                 </div>
                             )}
-                            <div className="pt-2 border-t border-slate-200">
-                                <CountdownTimer endDate={booth.bidEndDate} />
-                            </div>
+                            {booth.isBiddingEnabled && (
+                                <div className="pt-2 border-t border-slate-200">
+                                    <CountdownTimer endDate={booth.bidEndDate} />
+                                </div>
+                            )}
                         </div>
 
                         {vendorBiddingHistory.length > 0 && (
@@ -242,31 +252,33 @@ export const VendorBoothDetailModal: React.FC<VendorBoothDetailModalProps> = ({ 
                                     {maxCircuits < 20 && <p className="text-xs text-slate-500 mt-1">Admin has set a limit of {maxCircuits} circuit(s) for this booth.</p>}
                                 </div>
                                 
-                                {hasAnyPendingBuyout ? (
-                                    <div className="text-center p-2 bg-yellow-100 text-yellow-800 rounded-md font-semibold text-sm">Bidding is paused due to a pending buyout request.</div>
-                                ) : (
-                                    <div>
-                                        <label htmlFor={`bid-modal-${booth.id}`} className="block text-sm font-medium text-slate-700 mb-2">{userBidDetails ? 'Increase Your Bid' : 'Your Bid'}</label>
-                                        
-                                        <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 p-3 rounded-md mb-3 text-sm">
-                                            Suggested bid: <span className="font-bold">${nextMinBid.toFixed(2)}</span> or higher.
-                                        </div>
+                                {booth.isBiddingEnabled && (
+                                    hasAnyPendingBuyout ? (
+                                        <div className="text-center p-2 bg-yellow-100 text-yellow-800 rounded-md font-semibold text-sm">Bidding is paused due to a pending buyout request.</div>
+                                    ) : (
+                                        <div>
+                                            <label htmlFor={`bid-modal-${booth.id}`} className="block text-sm font-medium text-slate-700 mb-2">{userBidDetails ? 'Increase Your Bid' : 'Your Bid'}</label>
+                                            
+                                            <div className="bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 p-3 rounded-md mb-3 text-sm">
+                                                Suggested bid: <span className="font-bold">${nextMinBid.toFixed(2)}</span> or higher.
+                                            </div>
 
-                                        <div className="relative">
-                                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><DollarSignIcon className="h-5 w-5 text-slate-400" /></div>
-                                            <input type="number" id={`bid-modal-${booth.id}`} value={bidInput} onChange={(e) => setBidInput(e.target.value)} placeholder={nextMinBid.toFixed(2)} className="w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white" step={booth.increment} min={nextMinBid} />
+                                            <div className="relative">
+                                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><DollarSignIcon className="h-5 w-5 text-slate-400" /></div>
+                                                <input type="number" id={`bid-modal-${booth.id}`} value={bidInput} onChange={(e) => setBidInput(e.target.value)} placeholder={nextMinBid.toFixed(2)} className="w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white" step={booth.increment} min={nextMinBid} />
+                                            </div>
                                         </div>
-                                    </div>
+                                    )
                                 )}
                                 
                                 {hasVendorRequestedBuyout ? (
                                     <div className="mt-3 text-center p-2 bg-blue-100 text-blue-800 rounded-md font-semibold text-sm">Buyout Requested</div>
                                 ) : (
-                                    <div className={`mt-3 ${!hasAnyPendingBuyout && booth.allowBuyout ? 'grid grid-cols-2 gap-3' : 'grid'}`}>
-                                        {!hasAnyPendingBuyout && (
+                                    <div className={`mt-3 ${useTwoColumnLayout ? 'grid grid-cols-2 gap-3' : 'grid'}`}>
+                                        {showPlaceBidButton && (
                                             <button onClick={handlePlaceBid} disabled={!bidInput} className="w-full bg-slate-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed">Place Bid</button>
                                         )}
-                                        {booth.allowBuyout && <button onClick={handleBuyOut} className="w-full bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm">Buy Out</button>}
+                                        {showBuyOutButton && <button onClick={handleBuyOut} className="w-full bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm">Buy Out</button>}
                                     </div>
                                 )}
                             </div>

@@ -143,6 +143,7 @@ export const BoothDetails: React.FC<BoothDetailsProps> = ({ booth, onBack }) => 
                             <InfoItem label="Base Price" value={`$${booth.basePrice.toFixed(2)}`} />
                             <InfoItem label="Bid Increment" value={`$${booth.increment.toFixed(2)}`} />
                             {booth.allowBuyout && <InfoItem label="Buy Out Price" value={`$${booth.buyOutPrice.toFixed(2)}`} />}
+                            <InfoItem label="Bidding Payment Method" value={booth.biddingPaymentMethod} />
                             {booth.allowBuyout && <InfoItem label="Buyout Method" value={booth.buyoutMethod} />}
                             <InfoItem label="Bid End Date" value={formatDate(booth.bidEndDate)} />
                         </>
