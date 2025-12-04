@@ -220,7 +220,7 @@ export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ bo
                                                     <option key={i} value={i}>{i}</option>
                                                 ))}
                                             </select>
-                                            {maxCircuits < 20 && <p className="text-xs text-slate-500 mt-1">Admin has set a limit of {maxCircuits} circuit(s) for this booth.</p>}
+                                            {booth.circuitLimit !== undefined && <p className="text-xs text-slate-500 mt-1">Admin has set a limit of {booth.circuitLimit} circuit(s) for this booth.</p>}
                                         </div>
                                         
                                         {booth.isBiddingEnabled && (
