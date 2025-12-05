@@ -27,9 +27,10 @@ export interface Booth {
     allowDirectAssignment?: boolean;
     winner?: string;
     currentBid?: number;
+    // FIX: Add optional 'winningCircuits' property to align with mock data structure.
+    winningCircuits?: number;
     paymentConfirmed?: boolean;
     paymentSubmitted?: boolean;
-    winningCircuits?: number;
     isArchived?: boolean;
 }
 
@@ -42,7 +43,7 @@ interface BoothManagementProps {
 type BoothTab = 'bidding' | 'nonBidding' | 'archived';
 
 export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails, onGoToCreate, onGoToEdit }) => {
-    const { booths, archiveBooth, restoreBooth, bulkUpdateBooths } = useContext(BiddingContext);
+    const { booths, bids, archiveBooth, restoreBooth, bulkUpdateBooths } = useContext(BiddingContext);
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<BoothTab>('bidding');
     const [selectedBooths, setSelectedBooths] = useState<number[]>([]);
@@ -78,12 +79,36 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return;
 
+        const hasActiveBids = booth.status === 'Open' && (bids[booth.id] || []).length > 0;
+        const isSold = booth.status === 'Sold';
+        const isAwaitingPayment = booth.paymentSubmitted && !booth.paymentConfirmed;
+
+        const warnings: string[] = [];
+        if (hasActiveBids) {
+            warnings.push('This booth is part of a live auction with active bids. Archiving it will immediately end the bidding for all participants.');
+        }
+        if (isSold) {
+            warnings.push(`This booth has already been sold to ${booth.winner}.`);
+        }
+        if (isAwaitingPayment) {
+            warnings.push('This booth is currently awaiting payment confirmation from a vendor.');
+        }
+
+        let title = 'Archive Booth';
+        let message = `Are you sure you want to archive the booth "${booth.title}"? It will be hidden from vendors but can be restored later.`;
+
+        if (warnings.length > 0) {
+            title = 'Warning';
+            message = `${warnings.join('\n\n')}\n\nDespite the above, are you sure you want to archive this booth? This action can be undone by restoring it later.`;
+        }
+
         setConfirmModalState({
             isOpen: true,
-            title: 'Archive Booth',
-            message: `Are you sure you want to archive the booth "${booth.title}"? It will be hidden from vendors but can be restored later.`,
+            title,
+            message,
             onConfirm: () => {
                 archiveBooth(boothId);
+                addToast(`Booth "${booth.title}" archived.`, 'info');
                 setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
             }
         });
@@ -95,10 +120,35 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
     }
     
     const handleBulkArchive = () => {
+        const selectedBoothObjects = booths.filter(b => selectedBooths.includes(b.id));
+        
+        const liveAuctionCount = selectedBoothObjects.filter(b => b.status === 'Open' && (bids[b.id] || []).length > 0).length;
+        const soldCount = selectedBoothObjects.filter(b => b.status === 'Sold').length;
+        const awaitingPaymentCount = selectedBoothObjects.filter(b => b.paymentSubmitted && !b.paymentConfirmed).length;
+
+        const warnings: string[] = [];
+        if (liveAuctionCount > 0) {
+            warnings.push(`- ${liveAuctionCount} booth(s) are part of a live auction.`);
+        }
+        if (soldCount > 0) {
+            warnings.push(`- ${soldCount} booth(s) have already been sold.`);
+        }
+        if (awaitingPaymentCount > 0) {
+            warnings.push(`- ${awaitingPaymentCount} booth(s) are awaiting payment confirmation.`);
+        }
+
+        let title = `Archive ${selectedBooths.length} Booths`;
+        let message = `Are you sure you want to archive the ${selectedBooths.length} selected booth(s)?`;
+
+        if (warnings.length > 0) {
+            title = 'Warning';
+            message = `You are about to archive ${selectedBooths.length} booth(s). Please be aware:\n\n${warnings.join('\n')}\n\nArchiving will proceed for all selected booths. Do you want to continue?`;
+        }
+
         setConfirmModalState({
             isOpen: true,
-            title: `Archive ${selectedBooths.length} Booths`,
-            message: `Are you sure you want to archive the selected booths?`,
+            title,
+            message,
             onConfirm: () => {
                 bulkUpdateBooths(selectedBooths, { type: 'delete' });
                 addToast(`${selectedBooths.length} booths archived.`, 'info');

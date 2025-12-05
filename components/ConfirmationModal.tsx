@@ -28,7 +28,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <h3 className="text-xl font-bold text-slate-900">{title}</h3>
                 </div>
                 <div className="p-6">
-                    <p className="text-slate-700">{message}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap">{message}</p>
                 </div>
                 <div className="p-6 bg-slate-50/75 rounded-b-xl flex justify-end gap-3">
                     <button

@@ -91,8 +91,10 @@ export const Analytics: React.FC = () => {
         const revenueByLocation = soldBooths
             .filter(b => b.paymentConfirmed)
             .reduce((acc: Record<string, number>, booth) => {
-                // FIX: Used nullish coalescing operator (??) to prevent potential type errors in arithmetic operations with values that could be 0 or undefined.
-                acc[booth.location] = (acc[booth.location] ?? 0) + (booth.currentBid ?? 0);
+                // FIX: Refactored to use intermediate variables to ensure type safety in arithmetic operations.
+                const currentTotal = acc[booth.location] ?? 0;
+                const bidValue = booth.currentBid ?? 0;
+                acc[booth.location] = currentTotal + bidValue;
                 return acc;
             }, {} as Record<string, number>);
             
