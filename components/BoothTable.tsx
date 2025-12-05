@@ -43,7 +43,7 @@ const formatDate = (dateString: string) => {
 };
 
 export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete, onRestore, onViewDetails, selectedBooths, onSelectAll, onSelectOne, isArchivedView = false }) => {
-    const { buyoutRequests } = useContext(BiddingContext);
+    const { buyoutRequests, highlightedBooth } = useContext(BiddingContext);
     
     const getRowClass = (booth: Booth, isSelected: boolean) => {
         if (isSelected) return 'bg-pink-50 hover:bg-pink-100';
@@ -91,9 +91,10 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                         const isSelected = selectedBooths.includes(booth.id);
                         const hasPendingBuyout = (buyoutRequests[booth.id] || []).length > 0;
                         const isAwaitingPayment = booth.paymentSubmitted && !booth.paymentConfirmed;
+                        const isHighlighted = highlightedBooth === booth.id;
                         
                         return (
-                            <tr key={booth.id} className={`${getRowClass(booth, isSelected)} transition-colors`}>
+                            <tr key={booth.id} className={`${getRowClass(booth, isSelected)} ${isHighlighted ? 'highlight-bid' : ''} transition-colors`}>
                                 <td className="px-6 py-4">
                                     <input 
                                         type="checkbox"
@@ -109,9 +110,7 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                                         <span onClick={() => onViewDetails(booth.id)} className="cursor-pointer hover:text-pink-600 hover:underline">
                                             {booth.title}
                                         </span>
-                                        {/* FIX: Wrap icon in a span with a title attribute for tooltip, as the icon component does not accept a 'title' prop. */}
                                         {hasPendingBuyout && <span title="Pending Buyout Request"><ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" /></span>}
-                                        {/* FIX: Wrap icon in a span with a title attribute for tooltip, as the icon component does not accept a 'title' prop. */}
                                         {isAwaitingPayment && <span title="Awaiting Payment Confirmation"><DollarSignIcon className="w-4 h-4 text-blue-500" /></span>}
                                     </div>
                                 </td>

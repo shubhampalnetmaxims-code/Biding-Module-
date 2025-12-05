@@ -1,5 +1,5 @@
 import React, { useContext, useMemo } from 'react';
-import { BiddingContext, BuyoutRequest } from '../context/BiddingContext';
+import { BiddingContext, BuyoutRequest, Bid } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 import { AdminViewType } from './AdminView';
 import { ClockIcon, ExclamationTriangleIcon, DollarSignIcon, CheckCircleIcon, TrendingUpIcon } from './icons';
@@ -79,17 +79,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ setActiveView, o
     }, [booths, buyoutRequests]);
     
      const recentActivity = useMemo(() => {
-        // Fix for: Property 'map' does not exist on type 'unknown'.
-        const allBids = Object.entries(bids).flatMap(([boothId, bidList]) => 
-            (bidList as any[]).map(bid => ({ ...bid, boothId: parseInt(boothId), type: 'bid' as const }))
+        // FIX: Explicitly type `bidList` as `Bid[]` to resolve an error where it was inferred as `unknown`.
+        const allBids = Object.entries(bids).flatMap(([boothId, bidList]: [string, Bid[]]) => 
+            bidList.map((bid: Bid) => ({ ...bid, boothId: parseInt(boothId), type: 'bid' as const }))
         );
-        // Fix for: Property 'map' does not exist on type 'unknown'.
-        const allBuyouts = Object.entries(buyoutRequests).flatMap(([boothId, requests]) => 
-            (requests as any[]).map(r => ({ ...r, boothId: parseInt(boothId), type: 'buyout' as const }))
+        // FIX: Explicitly type `requests` as `BuyoutRequest[]` to resolve an error where it was inferred as `unknown`.
+        const allBuyouts = Object.entries(buyoutRequests).flatMap(([boothId, requests]: [string, BuyoutRequest[]]) => 
+            requests.map((r: BuyoutRequest) => ({ ...r, boothId: parseInt(boothId), type: 'buyout' as const }))
         );
         
         const combined = [...allBids, ...allBuyouts]
-            .sort((a, b) => new Date((b as any).timestamp).getTime() - new Date((a as any).timestamp).getTime())
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .slice(0, 5);
         
         return combined;
@@ -129,20 +129,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ setActiveView, o
                     <div className="space-y-3">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((activity, index) => {
-                                const booth = booths.find(b => b.id === (activity as any).boothId);
+                                const booth = booths.find(b => b.id === activity.boothId);
                                 if (!booth) return null;
-                                const bidAmount = 'bidAmount' in activity ? (activity as { bidAmount: number }).bidAmount : 0;
+                                const bidAmount = 'bidAmount' in activity ? (activity as Bid).bidAmount : 0;
 
                                 return (
                                     <div key={index} className="flex items-start gap-3">
                                         <div className="flex-shrink-0 mt-1">
-                                            {(activity as any).type === 'bid' ? <TrendingUpIcon className="w-4 h-4 text-slate-400" /> : <CheckCircleIcon className="w-4 h-4 text-slate-400" />}
+                                            {activity.type === 'bid' ? <TrendingUpIcon className="w-4 h-4 text-slate-400" /> : <CheckCircleIcon className="w-4 h-4 text-slate-400" />}
                                         </div>
                                         <p className="text-sm text-slate-600">
-                                            <span className="font-semibold text-slate-800">{(activity as any).vendorName}</span>
-                                            {(activity as any).type === 'bid' ? ` placed a bid of $${bidAmount.toFixed(2)} on ` : ' requested a buyout for '}
+                                            <span className="font-semibold text-slate-800">{activity.vendorName}</span>
+                                            {activity.type === 'bid' ? ` placed a bid of $${bidAmount.toFixed(2)} on ` : ' requested a buyout for '}
                                             <span className="font-semibold text-slate-800">{booth.title}</span>.
-                                            <span className="text-xs text-slate-400 ml-2">{new Date((activity as any).timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                            <span className="text-xs text-slate-400 ml-2">{new Date(activity.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                         </p>
                                     </div>
                                 );

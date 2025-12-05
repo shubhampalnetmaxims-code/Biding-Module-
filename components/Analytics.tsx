@@ -1,7 +1,7 @@
 
 
 import React, { useContext, useMemo } from 'react';
-import { BiddingContext } from '../context/BiddingContext';
+import { BiddingContext, Bid } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 
 const StatCard: React.FC<{ title: string; value: string; description: string; }> = ({ title, value, description }) => (
@@ -64,11 +64,10 @@ export const Analytics: React.FC = () => {
             .reduce((sum, b) => sum + (b.currentBid || 0), 0);
         
         const topBooths = Object.entries(bids)
-            // FIX: Cast bidList to any[] to access 'length' property.
-            .map(([boothId, bidList]) => ({
+            // FIX: Explicitly type `bidList` as `Bid[]` to resolve an error where its length could not be accessed because it was inferred as `unknown`.
+            .map(([boothId, bidList]: [string, Bid[]]) => ({
                 boothId,
-                // Fix for: Property 'length' does not exist on type 'unknown'.
-                bidCount: (bidList as any[]).length,
+                bidCount: bidList.length,
             }))
             .sort((a, b) => b.bidCount - a.bidCount)
             .slice(0, 5)
@@ -79,10 +78,8 @@ export const Analytics: React.FC = () => {
 
         const topBidders = Object.values(bids)
             .flat()
-            // FIX: Cast bid to any to access 'vendorName' property.
-            .reduce((acc, bid) => {
-                // Fix for: Property 'vendorName' does not exist on type 'unknown'.
-                acc[(bid as any).vendorName] = (acc[(bid as any).vendorName] || 0) + 1;
+            .reduce((acc, bid: Bid) => {
+                acc[bid.vendorName] = (acc[bid.vendorName] || 0) + 1;
                 return acc;
             }, {} as Record<string, number>);
             
@@ -94,9 +91,8 @@ export const Analytics: React.FC = () => {
         const revenueByLocation = soldBooths
             .filter(b => b.paymentConfirmed)
             .reduce((acc: Record<string, number>, booth) => {
-                // FIX: Use short-circuit evaluation to handle a potentially undefined `currentBid` and prevent NaN values.
-                // Fix for arithmetic operation error by using nullish coalescing for stricter type checking.
-                acc[booth.location] = (acc[booth.location] || 0) + (booth.currentBid ?? 0);
+                // FIX: Used nullish coalescing operator (??) to prevent potential type errors in arithmetic operations with values that could be 0 or undefined.
+                acc[booth.location] = (acc[booth.location] ?? 0) + (booth.currentBid ?? 0);
                 return acc;
             }, {} as Record<string, number>);
             

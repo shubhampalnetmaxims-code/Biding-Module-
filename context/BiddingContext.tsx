@@ -1,4 +1,4 @@
-import React, { createContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { Booth } from '../components/BoothManagement';
 
 // FIX: Add and export VENDOR_DETAILS with mock data to resolve import error in BoothDetails.tsx.
@@ -47,7 +47,7 @@ const initialBoothsData: Booth[] = [
 
 const initialLocationsData = Array.from(new Set(initialBoothsData.map(b => b.location)));
 
-interface UserBidDetails {
+export interface UserBidDetails {
     bidAmount: number;
     circuits: number;
 }
@@ -55,7 +55,7 @@ interface UserBids {
     [vendorName: string]: { [boothId: string]: UserBidDetails };
 }
 
-interface Bid extends UserBidDetails {
+export interface Bid extends UserBidDetails {
     id: number;
     vendorName: string;
     timestamp: string;
@@ -166,6 +166,7 @@ interface BiddingContextType {
     broadcastHistory: BroadcastMessage[];
     eventStatus: 'running' | 'paused';
     auditLog: AuditLogEntry[];
+    highlightedBooth: number | null;
     setEventStatus: (status: 'running' | 'paused') => void;
     goToEditBooth: (booth: Booth) => void;
     setGoToEditBooth: (fn: (booth: Booth) => void) => void;
@@ -204,6 +205,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [goToEditBooth, setGoToEditBooth] = useState<(booth: Booth) => void>(() => () => {});
     const [eventStatus, setEventStatusState] = useState<'running' | 'paused'>('running');
     const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+    const [highlightedBooth, setHighlightedBooth] = useState<number | null>(null);
     
     const [watchlist, setWatchlist] = useState<Watchlist>({
         'Vendor 1': new Set([4]),
@@ -299,6 +301,9 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         setUserBids(prev => ({ ...prev, [vendorName]: { ...(prev[vendorName] || {}), [boothId]: { bidAmount: amount, circuits } } }));
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, currentBid: amount, bidEndDate: newEndDate } : b));
         
+        setHighlightedBooth(boothId);
+        setTimeout(() => setHighlightedBooth(null), 2000);
+        
         const previousHighestBidderName = previousHighestBid ? previousHighestBid.vendorName : null;
 
         if (previousHighestBidderName && previousHighestBidderName !== vendorName) {
@@ -327,6 +332,21 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.title}!` };
     }, [booths, userBids, buyoutRequests, addNotification, eventStatus, bids]);
+
+    // Effect to simulate real-time bidding from another vendor
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const boothToBidOn = booths.find(b => b.id === 4 && b.status === 'Open');
+            if (boothToBidOn) {
+                const currentBid = boothToBidOn.currentBid || boothToBidOn.basePrice;
+                const newBidAmount = currentBid + boothToBidOn.increment;
+                placeBid('Vendor 3', 4, newBidAmount, 0);
+            }
+        }, 5000); // After 5 seconds, Vendor 3 places a bid on booth 4
+
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run only once on mount
 
     const removeBid = useCallback((vendorName: string, boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -551,7 +571,7 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     }, [addAuditLog]);
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, eventStatus, auditLog, setEventStatus, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, archiveBooth, restoreBooth, bulkUpdateBooths, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, eventStatus, auditLog, highlightedBooth, setEventStatus, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, archiveBooth, restoreBooth, bulkUpdateBooths, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
             {children}
         </BiddingContext.Provider>
     );

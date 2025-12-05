@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { BiddingContext } from '../context/BiddingContext';
+import { BiddingContext, BuyoutRequest } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 import { Tab } from './TabNavigation';
 import { ClockIcon, TrendingUpIcon, StarIcon } from './icons';
@@ -83,10 +83,10 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
 
     const pendingBuyouts = Object.values(buyoutRequests)
         .flat()
-        // Fix for: Property 'vendorName' does not exist on type 'unknown'.
-        .filter(req => (req as any).vendorName === vendorName)
+        // FIX: Explicitly type `req` as `any` to allow property access for the type guard, resolving an error where `req` was of type `unknown`.
+        .filter((req: any): req is BuyoutRequest => req.vendorName === vendorName)
         .map(req => booths.find(b => {
-             const reqBoothId = Object.keys(buyoutRequests).find(key => (buyoutRequests[key] as any[]).includes(req));
+             const reqBoothId = Object.keys(buyoutRequests).find(key => buyoutRequests[key].includes(req));
              return reqBoothId && b.id === parseInt(reqBoothId) && b.status === 'Open';
         }))
         .filter((b): b is Booth => !!b);
