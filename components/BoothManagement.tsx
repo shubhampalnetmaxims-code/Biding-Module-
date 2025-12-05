@@ -30,6 +30,7 @@ export interface Booth {
     paymentConfirmed?: boolean;
     paymentSubmitted?: boolean;
     winningCircuits?: number;
+    isArchived?: boolean;
 }
 
 interface BoothManagementProps {
@@ -38,22 +39,24 @@ interface BoothManagementProps {
     onGoToEdit: (booth: Booth) => void;
 }
 
-type BoothTab = 'bidding' | 'nonBidding';
+type BoothTab = 'bidding' | 'nonBidding' | 'archived';
 
 export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails, onGoToCreate, onGoToEdit }) => {
-    const { booths, deleteBooth, bulkUpdateBooths } = useContext(BiddingContext);
+    const { booths, archiveBooth, restoreBooth, bulkUpdateBooths } = useContext(BiddingContext);
     const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<BoothTab>('bidding');
     const [selectedBooths, setSelectedBooths] = useState<number[]>([]);
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
     
-    const { biddingBooths, nonBiddingBooths } = useMemo(() => {
-        const bidding = booths.filter(b => b.isBiddingEnabled || (b.allowBuyout ?? false));
-        const nonBidding = booths.filter(b => !b.isBiddingEnabled && !(b.allowBuyout ?? false));
-        return { biddingBooths: bidding, nonBiddingBooths: nonBidding };
+    const { biddingBooths, nonBiddingBooths, archivedBooths } = useMemo(() => {
+        const activeBooths = booths.filter(b => !b.isArchived);
+        const bidding = activeBooths.filter(b => b.isBiddingEnabled || (b.allowBuyout ?? false));
+        const nonBidding = activeBooths.filter(b => !b.isBiddingEnabled && !(b.allowBuyout ?? false));
+        const archived = booths.filter(b => b.isArchived);
+        return { biddingBooths: bidding, nonBiddingBooths: nonBidding, archivedBooths: archived };
     }, [booths]);
 
-    const displayedBooths = activeTab === 'bidding' ? biddingBooths : nonBiddingBooths;
+    const displayedBooths = activeTab === 'bidding' ? biddingBooths : activeTab === 'nonBidding' ? nonBiddingBooths : archivedBooths;
 
     const handleSelectAll = () => {
         if (selectedBooths.length === displayedBooths.length) {
@@ -71,29 +74,34 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
         );
     };
 
-    const handleDelete = (boothId: number) => {
+    const handleArchive = (boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return;
 
         setConfirmModalState({
             isOpen: true,
-            title: 'Delete Booth',
-            message: `Are you sure you want to delete the booth "${booth.title}"? This action cannot be undone.`,
+            title: 'Archive Booth',
+            message: `Are you sure you want to archive the booth "${booth.title}"? It will be hidden from vendors but can be restored later.`,
             onConfirm: () => {
-                deleteBooth(boothId);
+                archiveBooth(boothId);
                 setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
             }
         });
     };
     
-    const handleBulkDelete = () => {
+    const handleRestore = (boothId: number) => {
+        restoreBooth(boothId);
+        addToast("Booth restored successfully.", "success");
+    }
+    
+    const handleBulkArchive = () => {
         setConfirmModalState({
             isOpen: true,
-            title: `Delete ${selectedBooths.length} Booths`,
-            message: `Are you sure you want to delete the selected booths? This action cannot be undone.`,
+            title: `Archive ${selectedBooths.length} Booths`,
+            message: `Are you sure you want to archive the selected booths?`,
             onConfirm: () => {
                 bulkUpdateBooths(selectedBooths, { type: 'delete' });
-                addToast(`${selectedBooths.length} booths deleted.`, 'info');
+                addToast(`${selectedBooths.length} booths archived.`, 'info');
                 setSelectedBooths([]);
                 setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
             }
@@ -156,10 +164,16 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                     >
                         Direct Assignment Only ({nonBiddingBooths.length})
                     </button>
+                    <button
+                        onClick={() => setActiveTab('archived')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'archived' ? 'border-pink-500 text-pink-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+                    >
+                        Archived ({archivedBooths.length})
+                    </button>
                   </nav>
                 </div>
                 
-                {selectedBooths.length > 0 && (
+                {selectedBooths.length > 0 && activeTab !== 'archived' && (
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-4 animate-fade-in">
                         <div className="flex-shrink-0">
                             <span className="font-semibold text-slate-800">{selectedBooths.length} booth{selectedBooths.length > 1 ? 's' : ''} selected</span>
@@ -182,19 +196,21 @@ export const BoothManagement: React.FC<BoothManagementProps> = ({ onViewDetails,
                             </div>
                         </div>
                         <div className="flex-shrink-0">
-                            <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-1.5 hover:bg-red-100 transition-colors">
+                            <button onClick={handleBulkArchive} className="flex items-center gap-1.5 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-1.5 hover:bg-red-100 transition-colors">
                                 <TrashIcon className="w-4 h-4" />
-                                Delete
+                                Archive
                             </button>
                         </div>
                     </div>
                 )}
                 
                 {displayedBooths.length > 0 ? (
-                    <BoothTable booths={displayedBooths} onEdit={onGoToEdit} onDelete={handleDelete} onViewDetails={onViewDetails} selectedBooths={selectedBooths} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} />
+                    <BoothTable booths={displayedBooths} onEdit={onGoToEdit} onDelete={handleArchive} onRestore={handleRestore} onViewDetails={onViewDetails} selectedBooths={selectedBooths} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} isArchivedView={activeTab === 'archived'} />
                 ) : (
                     <p className="text-sm text-slate-500 py-4 text-center">
-                        {activeTab === 'bidding' ? 'No booths are currently available in the bidding module.' : 'No booths are currently configured for direct assignment only.'}
+                        {activeTab === 'bidding' ? 'No booths are currently available in the bidding module.' : 
+                         activeTab === 'nonBidding' ? 'No booths are currently configured for direct assignment only.' :
+                         'There are no archived booths.'}
                     </p>
                 )}
             </div>

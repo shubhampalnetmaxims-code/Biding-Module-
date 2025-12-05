@@ -1,3 +1,5 @@
+
+
 import React, { useContext, useMemo } from 'react';
 import { BiddingContext } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
@@ -62,9 +64,10 @@ export const Analytics: React.FC = () => {
             .reduce((sum, b) => sum + (b.currentBid || 0), 0);
         
         const topBooths = Object.entries(bids)
+            // FIX: Cast bidList to any[] to access 'length' property.
             .map(([boothId, bidList]) => ({
                 boothId,
-                // FIX: Cast bidList to any[] to fix 'length' does not exist on type 'unknown' error.
+                // Fix for: Property 'length' does not exist on type 'unknown'.
                 bidCount: (bidList as any[]).length,
             }))
             .sort((a, b) => b.bidCount - a.bidCount)
@@ -76,9 +79,10 @@ export const Analytics: React.FC = () => {
 
         const topBidders = Object.values(bids)
             .flat()
-            // FIX: Add 'any' type to bid to fix 'vendorName' does not exist on type 'unknown' error.
-            .reduce((acc, bid: any) => {
-                acc[bid.vendorName] = (acc[bid.vendorName] || 0) + 1;
+            // FIX: Cast bid to any to access 'vendorName' property.
+            .reduce((acc, bid) => {
+                // Fix for: Property 'vendorName' does not exist on type 'unknown'.
+                acc[(bid as any).vendorName] = (acc[(bid as any).vendorName] || 0) + 1;
                 return acc;
             }, {} as Record<string, number>);
             
@@ -89,15 +93,15 @@ export const Analytics: React.FC = () => {
             
         const revenueByLocation = soldBooths
             .filter(b => b.paymentConfirmed)
-            // FIX: Explicitly type `booth` parameter to resolve cascading type errors.
-            .reduce((acc: Record<string, number>, booth: Booth) => {
-                acc[booth.location] = (acc[booth.location] || 0) + (booth.currentBid || 0);
+            .reduce((acc: Record<string, number>, booth) => {
+                // FIX: Use short-circuit evaluation to handle a potentially undefined `currentBid` and prevent NaN values.
+                // Fix for arithmetic operation error by using nullish coalescing for stricter type checking.
+                acc[booth.location] = (acc[booth.location] || 0) + (booth.currentBid ?? 0);
                 return acc;
             }, {} as Record<string, number>);
             
         const sortedRevenueByLocation = Object.entries(revenueByLocation)
-            // FIX: Explicitly cast sort parameters to `number` to resolve arithmetic error.
-            .sort(([, a], [, b]) => (b as number) - (a as number))
+            .sort(([, a], [, b]) => b - a)
             .map(([label, value]) => ({ label, value: `$${value.toLocaleString()}` }));
 
         return {

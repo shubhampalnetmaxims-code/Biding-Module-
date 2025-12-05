@@ -1,8 +1,7 @@
 import React, { useContext, useMemo } from 'react';
-import { BiddingContext } from '../context/BiddingContext';
+import { BiddingContext, BuyoutRequest } from '../context/BiddingContext';
 import { Booth } from './BoothManagement';
 import { AdminViewType } from './AdminView';
-// FIX: Import the missing TrendingUpIcon
 import { ClockIcon, ExclamationTriangleIcon, DollarSignIcon, CheckCircleIcon, TrendingUpIcon } from './icons';
 
 interface AdminDashboardProps {
@@ -80,19 +79,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ setActiveView, o
     }, [booths, buyoutRequests]);
     
      const recentActivity = useMemo(() => {
-        // FIX: Add boothId to each bid object to create a consistent data structure for activities.
-        // FIX: Cast bidList to any[] to fix 'map' does not exist on type 'unknown' error.
+        // Fix for: Property 'map' does not exist on type 'unknown'.
         const allBids = Object.entries(bids).flatMap(([boothId, bidList]) => 
             (bidList as any[]).map(bid => ({ ...bid, boothId: parseInt(boothId), type: 'bid' as const }))
         );
-        // FIX: Cast requests to any[] to fix 'map' does not exist on type 'unknown' error.
+        // Fix for: Property 'map' does not exist on type 'unknown'.
         const allBuyouts = Object.entries(buyoutRequests).flatMap(([boothId, requests]) => 
             (requests as any[]).map(r => ({ ...r, boothId: parseInt(boothId), type: 'buyout' as const }))
         );
         
         const combined = [...allBids, ...allBuyouts]
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-            .slice(0, 5); // get latest 5 activities
+            .sort((a, b) => new Date((b as any).timestamp).getTime() - new Date((a as any).timestamp).getTime())
+            .slice(0, 5);
         
         return combined;
     }, [bids, buyoutRequests]);
@@ -131,21 +129,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ setActiveView, o
                     <div className="space-y-3">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((activity, index) => {
-                                // FIX: Simplify booth lookup now that `boothId` is available on all activity types.
-                                const booth = booths.find(b => b.id === activity.boothId);
+                                const booth = booths.find(b => b.id === (activity as any).boothId);
                                 if (!booth) return null;
+                                const bidAmount = 'bidAmount' in activity ? (activity as { bidAmount: number }).bidAmount : 0;
 
                                 return (
                                     <div key={index} className="flex items-start gap-3">
                                         <div className="flex-shrink-0 mt-1">
-                                            {activity.type === 'bid' ? <TrendingUpIcon className="w-4 h-4 text-slate-400" /> : <CheckCircleIcon className="w-4 h-4 text-slate-400" />}
+                                            {(activity as any).type === 'bid' ? <TrendingUpIcon className="w-4 h-4 text-slate-400" /> : <CheckCircleIcon className="w-4 h-4 text-slate-400" />}
                                         </div>
                                         <p className="text-sm text-slate-600">
-                                            <span className="font-semibold text-slate-800">{activity.vendorName}</span>
-                                            {/* FIX: Remove `as any` assertion as TypeScript can now infer the correct type. */}
-                                            {activity.type === 'bid' ? ` placed a bid of $${(activity as any).bidAmount.toFixed(2)} on ` : ' requested a buyout for '}
+                                            <span className="font-semibold text-slate-800">{(activity as any).vendorName}</span>
+                                            {(activity as any).type === 'bid' ? ` placed a bid of $${bidAmount.toFixed(2)} on ` : ' requested a buyout for '}
                                             <span className="font-semibold text-slate-800">{booth.title}</span>.
-                                            <span className="text-xs text-slate-400 ml-2">{new Date(activity.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                            <span className="text-xs text-slate-400 ml-2">{new Date((activity as any).timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                         </p>
                                     </div>
                                 );

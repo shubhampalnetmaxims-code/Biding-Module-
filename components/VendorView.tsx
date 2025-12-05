@@ -16,6 +16,7 @@ import { useToast } from '../context/ToastContext';
 import { BiddingDashboard } from './BiddingDashboard';
 import { VendorBoothDetailPage } from './VendorBoothDetailPage';
 import { Booth } from './BoothManagement';
+import { NotificationModal } from './NotificationModal';
 
 const TABS: Tab[] = [
   'Bidding Dashboard',
@@ -31,6 +32,7 @@ const TABS: Tab[] = [
 
 interface VendorViewProps {
     vendorName: string;
+    onOpenNotifications: () => void;
 }
 
 function usePrevious<T>(value: T): T | undefined {
@@ -41,7 +43,7 @@ function usePrevious<T>(value: T): T | undefined {
     return ref.current;
 }
 
-export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
+export const VendorView: React.FC<VendorViewProps> = ({ vendorName, onOpenNotifications }) => {
   const [activeTab, setActiveTab] = useState<Tab>(TABS[0]);
   const { notifications } = useContext(BiddingContext);
   const { addToast } = useToast();
@@ -73,20 +75,18 @@ export const VendorView: React.FC<VendorViewProps> = ({ vendorName }) => {
 
   return (
     <div className="space-y-6">
-      <EventHeader />
-      {vendorNotifications.length > 0 && (
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-md shadow-md space-y-3" role="alert">
-            {vendorNotifications.slice(-3).reverse().map((note, index) => (
-                <div key={index} className="flex animate-fade-in">
+      <EventHeader onOpenNotifications={onOpenNotifications} />
+      {(notifications[vendorName] || []).filter(n => n.type === 'broadcast').slice(-1).map((note, index) => (
+          <div key={index} className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-md shadow-md space-y-3" role="alert">
+                <div className="flex animate-fade-in">
                     <div className="py-1 flex-shrink-0"><InfoIcon className="h-5 w-5 text-yellow-500 mr-3" /></div>
                     <div>
                         <p className="font-bold">{note.title}</p>
                         <p className="text-sm">{note.message}</p>
                     </div>
                 </div>
-            ))}
         </div>
-      )}
+      ))}
 
       <ApplicationStatus vendorName={vendorName} />
       

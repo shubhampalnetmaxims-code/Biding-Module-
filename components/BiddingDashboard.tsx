@@ -83,10 +83,10 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
 
     const pendingBuyouts = Object.values(buyoutRequests)
         .flat()
-        // FIX: Add 'any' type to req to fix 'vendorName' does not exist on type 'unknown' error.
-        .filter((req: any) => req.vendorName === vendorName)
+        // Fix for: Property 'vendorName' does not exist on type 'unknown'.
+        .filter(req => (req as any).vendorName === vendorName)
         .map(req => booths.find(b => {
-             const reqBoothId = Object.keys(buyoutRequests).find(key => buyoutRequests[key].includes(req));
+             const reqBoothId = Object.keys(buyoutRequests).find(key => (buyoutRequests[key] as any[]).includes(req));
              return reqBoothId && b.id === parseInt(reqBoothId) && b.status === 'Open';
         }))
         .filter((b): b is Booth => !!b);
@@ -96,7 +96,6 @@ export const BiddingDashboard: React.FC<BiddingDashboardProps> = ({ vendorName, 
         .filter((b): b is Booth => !!b);
 
     const handleNavigate = (booth: Booth) => {
-        setActiveTab('Bidding Module');
         setDetailedBooth(booth);
     };
 

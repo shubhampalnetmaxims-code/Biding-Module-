@@ -143,6 +143,13 @@ interface BroadcastMessage {
     timestamp: string;
 }
 
+interface AuditLogEntry {
+    id: number;
+    timestamp: string;
+    action: string;
+    details: string;
+}
+
 type BulkAction =
   | { type: 'delete' }
   | { type: 'changeStatus', status: Booth['status'] }
@@ -157,6 +164,9 @@ interface BiddingContextType {
     buyoutRequests: AllBuyoutRequests;
     watchlist: Watchlist;
     broadcastHistory: BroadcastMessage[];
+    eventStatus: 'running' | 'paused';
+    auditLog: AuditLogEntry[];
+    setEventStatus: (status: 'running' | 'paused') => void;
     goToEditBooth: (booth: Booth) => void;
     setGoToEditBooth: (fn: (booth: Booth) => void) => void;
     toggleWatchlist: (vendorName: string, boothId: number) => void;
@@ -170,12 +180,13 @@ interface BiddingContextType {
     confirmBid: (boothId: number, winningBidId: number) => void;
     addBooth: (booth: Omit<Booth, 'id'>) => void;
     updateBooth: (boothId: number, updatedBooth: Booth) => void;
-    deleteBooth: (boothId: number) => void;
+    archiveBooth: (boothId: number) => void;
+    restoreBooth: (boothId: number) => void;
     bulkUpdateBooths: (boothIds: number[], action: BulkAction) => void;
     submitPayment: (boothId: number) => void;
     confirmPayment: (boothId: number) => void;
     revokeBid: (boothId: number) => void;
-    assignBoothToVendor: (boothId: number, vendorName: string) => void;
+    assignBoothToVendor: (boothId: number, vendorName: string, price: number) => void;
     unassignBooth: (boothId: number) => void;
     notifyAllVendors: (message: string) => void;
 }
@@ -191,12 +202,24 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [buyoutRequests, setBuyoutRequests] = useState<AllBuyoutRequests>({});
     const [broadcastHistory, setBroadcastHistory] = useState<BroadcastMessage[]>([]);
     const [goToEditBooth, setGoToEditBooth] = useState<(booth: Booth) => void>(() => () => {});
+    const [eventStatus, setEventStatusState] = useState<'running' | 'paused'>('running');
+    const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
     
     const [watchlist, setWatchlist] = useState<Watchlist>({
         'Vendor 1': new Set([4]),
         'Vendor 2': new Set([6]),
         'Vendor 3': new Set([1]),
     });
+
+    const addAuditLog = useCallback((action: string, details: string) => {
+        const newEntry: AuditLogEntry = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            action,
+            details,
+        };
+        setAuditLog(prev => [...prev, newEntry]);
+    }, []);
     
     const toggleWatchlist = useCallback((vendorName: string, boothId: number) => {
         setWatchlist(prev => {
@@ -222,10 +245,16 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             [vendorName]: [...(prev[vendorName] || []), { title, message, type }]
         }));
     }, []);
+
+    const setEventStatus = useCallback((status: 'running' | 'paused') => {
+        setEventStatusState(status);
+        addAuditLog('Event Status Changed', `Event status set to "${status}".`);
+    }, [addAuditLog]);
     
     const placeBid = useCallback((vendorName: string, boothId: number, amount: number, circuits: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return { success: false, message: "Booth not found." };
+        if (eventStatus === 'paused') return { success: false, message: "Bidding is currently paused by the administrator." };
         if (booth.status !== 'Open') return { success: false, message: "Bidding for this booth is closed." };
 
         if (booth.buyoutMethod === 'Admin approve' && (buyoutRequests[boothId] || []).length > 0) {
@@ -248,21 +277,56 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
             return { success: false, message: "Bidding limit reached." };
         }
 
+        const allBoothBids = bids[boothId] || [];
+        const previousHighestBid = allBoothBids.length > 0
+            ? allBoothBids.reduce((max, bid) => bid.bidAmount > max.bidAmount ? bid : max, allBoothBids[0])
+            : null;
+
+        const timeLeft = +new Date(booth.bidEndDate) - +new Date();
+        const minutesLeft = timeLeft / (1000 * 60);
+
+        let newEndDate = booth.bidEndDate;
+        let bidExtended = false;
+        if (minutesLeft > 0 && minutesLeft <= 5) {
+            const extendedDate = new Date(booth.bidEndDate);
+            extendedDate.setMinutes(extendedDate.getMinutes() + 5);
+            newEndDate = extendedDate.toISOString();
+            bidExtended = true;
+        }
+
         const newBid: Bid = { id: Date.now(), vendorName, bidAmount: amount, circuits, timestamp: new Date().toISOString() };
-        setBids(prev => ({
-            ...prev,
-            [boothId]: [...(prev[boothId] || []), newBid]
-        }));
+        setBids(prev => ({ ...prev, [boothId]: [...(prev[boothId] || []), newBid] }));
+        setUserBids(prev => ({ ...prev, [vendorName]: { ...(prev[vendorName] || {}), [boothId]: { bidAmount: amount, circuits } } }));
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, currentBid: amount, bidEndDate: newEndDate } : b));
         
-        setUserBids(prev => ({
-            ...prev,
-            [vendorName]: { ...(prev[vendorName] || {}), [boothId]: { bidAmount: amount, circuits } }
-        }));
+        const previousHighestBidderName = previousHighestBid ? previousHighestBid.vendorName : null;
+
+        if (previousHighestBidderName && previousHighestBidderName !== vendorName) {
+            addNotification(
+                previousHighestBidderName,
+                "You've been outbid!",
+                `Another vendor has placed a higher bid on "${booth.title}". The new current bid is $${amount.toFixed(2)}.`
+            );
+            
+            if (bidExtended) {
+                addNotification(
+                    previousHighestBidderName,
+                    'Auction Extended!',
+                    `A last-minute bid on "${booth.title}" has extended the auction by 5 minutes.`
+                );
+            }
+        }
         
-        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, currentBid: amount } : b));
+        if (bidExtended) {
+            addNotification(
+                vendorName,
+                'Auction Extended!',
+                `Your last-minute bid on "${booth.title}" has extended the auction by 5 minutes.`
+            );
+        }
 
         return { success: true, message: `Successfully placed a bid of $${amount.toFixed(2)} for ${booth.title}!` };
-    }, [booths, userBids, buyoutRequests]);
+    }, [booths, userBids, buyoutRequests, addNotification, eventStatus, bids]);
 
     const removeBid = useCallback((vendorName: string, boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
@@ -278,16 +342,13 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         }
 
         const previousHighestBidderWasThisVendor = booth.currentBid === (userBids[vendorName]?.[boothId]?.bidAmount);
-
         const remainingBids = (bids[boothId] || []).filter(b => b.vendorName !== vendorName);
         setBids(prev => ({ ...prev, [boothId]: remainingBids }));
-
         setUserBids(prev => {
             const newUserBids = JSON.parse(JSON.stringify(prev));
             if (newUserBids[vendorName]) delete newUserBids[vendorName][boothId];
             return newUserBids;
         });
-
         const newHighestBidderDetails = remainingBids.length > 0
             ? remainingBids.reduce((max, bid) => bid.bidAmount > max.bidAmount ? bid : max, remainingBids[0])
             : null;
@@ -300,7 +361,6 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (newHighestBidderDetails && previousHighestBidderWasThisVendor && newHighestBidderDetails.vendorName !== vendorName) {
             addNotification(newHighestBidderDetails.vendorName, "You are now the highest bidder!", `The previous high bidder for "${booth.title}" has removed their bid. You are now the leading bidder with a bid of $${newHighestBidderDetails.bidAmount.toFixed(2)}.`);
         }
-
         return { success: true, message: `Your bid for "${booth.title}" has been successfully removed.` };
     }, [booths, bids, userBids, buyoutRequests, addNotification]);
 
@@ -308,7 +368,6 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return;
         const newRequest: BuyoutRequest = { vendorName, circuits, timestamp: new Date().toISOString() };
-        
         setBuyoutRequests(prev => ({ ...prev, [boothId]: [...(prev[boothId] || []), newRequest] }));
         addNotification('admin', 'Buy Out Request', `${vendorName} has requested to buy out "${booth.title}" for $${booth.buyOutPrice.toFixed(2)} (plus circuit costs).`);
     }, [booths, addNotification]);
@@ -319,35 +378,25 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const winningRequest = requests.find(r => r.vendorName === winnerName);
 
         if (!booth || !winningRequest) return;
-
         const totalPayable = booth.buyOutPrice + (winningRequest.circuits * 60);
-
-        setBooths(prev => prev.map(b => 
-            b.id === boothId 
-                ? { ...b, status: 'Sold', winner: winnerName, currentBid: booth.buyOutPrice, winningCircuits: winningRequest.circuits, paymentSubmitted: false, paymentConfirmed: false }
-                : b
-        ));
-
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: winnerName, currentBid: booth.buyOutPrice, winningCircuits: winningRequest.circuits, paymentSubmitted: false, paymentConfirmed: false } : b ));
         setBuyoutRequests(prev => {
             const newRequests = { ...prev };
             delete newRequests[boothId];
             return newRequests;
         });
 
+        addAuditLog('Buyout Approved', `Approved buyout for "${booth.title}" for vendor ${winnerName}.`);
         addNotification(winnerName, 'Congratulations! Your Buyout Was Approved!', `Your buyout request for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`);
-        
         requests.forEach(req => {
             if (req.vendorName !== winnerName) addNotification( req.vendorName, 'Update on Your Buyout Request', `The booth "${booth.title}" has been sold to another vendor. Thank you for your interest.`);
         });
-    }, [booths, buyoutRequests, addNotification]);
-
+    }, [booths, buyoutRequests, addNotification, addAuditLog]);
 
     const directBuyOut = useCallback((vendorName: string, boothId: number, circuits: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth || booth.status !== 'Open') return;
-        
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: vendorName, currentBid: b.buyOutPrice, winningCircuits: circuits, paymentSubmitted: true, paymentConfirmed: true } : b));
-        
         addNotification(vendorName, 'Purchase Successful!', `You have successfully purchased "${booth.title}" for $${booth.buyOutPrice.toFixed(2)}. Your payment is confirmed.`);
         addNotification('admin', 'Booth Sold (Direct Pay)', `"${booth.title}" has been sold to ${vendorName} for $${booth.buyOutPrice.toFixed(2)} via direct payment.`);
     }, [booths, addNotification]);
@@ -355,22 +404,19 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const confirmBid = useCallback((boothId: number, winningBidId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (!booth) return;
-        
         const boothBids = bids[boothId] || [];
         const winningBid = boothBids.find(b => b.id === winningBidId);
 
         if (!winningBid) return;
-
         const winnerName = winningBid.vendorName;
         const totalPayable = winningBid.bidAmount + (winningBid.circuits * 60);
-
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: winnerName, currentBid: winningBid.bidAmount, winningCircuits: winningBid.circuits, paymentSubmitted: false, paymentConfirmed: false } : b));
 
+        addAuditLog('Bid Winner Confirmed', `Confirmed ${winnerName} as winner of "${booth.title}".`);
         addNotification(winnerName, 'Congratulations! You Won a Bid!', `Your bid for "${booth.title}" has been accepted! Please pay the total amount of $${totalPayable.toFixed(2)} within 24 hours to secure your spot.`);
-        
         const losingBidders: Set<string> = new Set(boothBids.filter(b => b.vendorName !== winnerName).map(b => b.vendorName));
         losingBidders.forEach(loserName => addNotification(loserName, 'Update on Your Bid', `The auction for the booth "${booth.title}" has now closed. Thank you for your participation.`));
-    }, [booths, bids, addNotification]);
+    }, [booths, bids, addNotification, addAuditLog]);
 
     const submitPayment = useCallback((boothId: number) => {
         setBooths(prev => prev.map(b => b.id === boothId ? { ...b, paymentSubmitted: true } : b));
@@ -379,33 +425,39 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
     const confirmPayment = useCallback((boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if(booth && booth.winner) {
-             setBooths(prev => prev.map(b => b.id === boothId ? { ...b, paymentConfirmed: true } : b));
+            setBooths(prev => prev.map(b => b.id === boothId ? { ...b, paymentConfirmed: true } : b));
+            addAuditLog('Payment Confirmed', `Confirmed payment for "${booth.title}" from vendor ${booth.winner}.`);
             addNotification(booth.winner, 'Payment Confirmed!', `Your payment for "${booth.title}" has been successfully confirmed by the administrator.`);
         }
-    }, [booths, addNotification]);
+    }, [booths, addNotification, addAuditLog]);
     
     const revokeBid = useCallback((boothId: number) => {
         const booth = booths.find(b => b.id === boothId);
         if (booth && booth.winner) {
             const revokedWinner = booth.winner;
+            const secondHighestBid = (bids[boothId] || [])
+                .filter(b => b.vendorName !== revokedWinner)
+                .sort((a, b) => b.bidAmount - a.bidAmount)[0];
+
             setBooths(prev => prev.map(b => {
                 if (b.id === boothId) {
-                    const { winner, currentBid, paymentConfirmed, paymentSubmitted, winningCircuits, ...rest } = b;
-                    return { ...rest, status: 'Open', currentBid: b.basePrice };
+                    const { winner, paymentConfirmed, paymentSubmitted, winningCircuits, ...rest } = b;
+                    return { ...rest, status: 'Open', currentBid: secondHighestBid ? secondHighestBid.bidAmount : b.basePrice };
                 }
                 return b;
             }));
+            addAuditLog('Bid Revoked', `Revoked winning bid for "${booth.title}" from vendor ${revokedWinner}.`);
             addNotification(revokedWinner, 'Bid Revoked', `Unfortunately, your winning bid for "${booth.title}" has been revoked by the administrator. Please contact them for more details.`);
         }
-    }, [booths, addNotification]);
+    }, [booths, addNotification, addAuditLog, bids]);
 
-    const assignBoothToVendor = useCallback((boothId: number, vendorName: string) => {
+    const assignBoothToVendor = useCallback((boothId: number, vendorName: string, price: number) => {
         const boothToAssign = booths.find(b => b.id === boothId);
         if (!boothToAssign) return;
-
-        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: vendorName, currentBid: b.basePrice, paymentSubmitted: true, paymentConfirmed: true, winningCircuits: 0 } : b));
+        setBooths(prev => prev.map(b => b.id === boothId ? { ...b, status: 'Sold', winner: vendorName, currentBid: price, paymentSubmitted: true, paymentConfirmed: true, winningCircuits: 0 } : b));
+        addAuditLog('Booth Assigned', `Assigned "${boothToAssign.title}" to ${vendorName} for $${price.toFixed(2)}.`);
         addNotification(vendorName, 'Booth Assigned to You', `The administrator has assigned booth "${boothToAssign.title}" to you.`);
-    }, [booths, addNotification]);
+    }, [booths, addNotification, addAuditLog]);
 
     const unassignBooth = useCallback((boothId: number) => {
         const boothToUnassign = booths.find(b => b.id === boothId);
@@ -418,35 +470,56 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
                 }
                 return b;
             }));
+            addAuditLog('Booth Unassigned', `Unassigned "${boothToUnassign.title}" from vendor ${unassignedWinner}.`);
             addNotification(unassignedWinner, 'Booth Unassigned', `The booth "${boothToUnassign.title}" has been unassigned from you by the administrator.`);
         }
-    }, [booths, addNotification]);
+    }, [booths, addNotification, addAuditLog]);
     
     const notifyAllVendors = useCallback((message: string) => {
         const VENDORS = ['Vendor 1', 'Vendor 2', 'Vendor 3'];
-        VENDORS.forEach(vendor => {
-            addNotification(vendor, 'Admin Broadcast', message, 'broadcast');
-        });
+        VENDORS.forEach(vendor => { addNotification(vendor, 'Admin Broadcast', message, 'broadcast'); });
         setBroadcastHistory(prev => [...prev, { message, timestamp: new Date().toISOString() }]);
-    }, [addNotification]);
+        addAuditLog('Broadcast Sent', `Sent notification to all vendors: "${message}"`);
+    }, [addNotification, addAuditLog]);
 
     const addBooth = useCallback((boothData: Omit<Booth, 'id'>) => {
         const newBooth: Booth = { ...boothData, id: Date.now() };
         setBooths(prev => [newBooth, ...prev]);
-    }, []);
+        addAuditLog('Booth Created', `Created new booth: "${newBooth.title}".`);
+    }, [addAuditLog]);
 
     const updateBooth = useCallback((boothId: number, updatedBooth: Booth) => {
         setBooths(prev => prev.map(b => b.id === boothId ? updatedBooth : b));
-    }, []);
+        addAuditLog('Booth Updated', `Updated details for booth: "${updatedBooth.title}".`);
+    }, [addAuditLog]);
 
-    const deleteBooth = useCallback((boothId: number) => {
-        setBooths(prev => prev.filter(b => b.id !== boothId));
-    }, []);
+    const archiveBooth = useCallback((boothId: number) => {
+        const booth = booths.find(b => b.id === boothId);
+        if (booth) {
+            setBooths(prev => prev.map(b => b.id === boothId ? { ...b, isArchived: true } : b));
+            addAuditLog('Booth Archived', `Archived booth: "${booth.title}".`);
+        }
+    }, [booths, addAuditLog]);
+
+    const restoreBooth = useCallback((boothId: number) => {
+        const booth = booths.find(b => b.id === boothId);
+        if (booth) {
+            setBooths(prev => prev.map(b => b.id === boothId ? { ...b, isArchived: false } : b));
+            addAuditLog('Booth Restored', `Restored booth: "${booth.title}".`);
+        }
+    }, [booths, addAuditLog]);
 
     const bulkUpdateBooths = useCallback((boothIds: number[], action: BulkAction) => {
         setBooths(prev => {
             if (action.type === 'delete') {
-                return prev.filter(b => !boothIds.includes(b.id));
+                addAuditLog('Bulk Action: Archive', `Archived ${boothIds.length} booths.`);
+                return prev.map(b => boothIds.includes(b.id) ? { ...b, isArchived: true } : b);
+            }
+            if (action.type === 'changeStatus') {
+                addAuditLog('Bulk Action: Change Status', `Changed status to "${action.status}" for ${boothIds.length} booths.`);
+            }
+            if (action.type === 'extendBidding') {
+                addAuditLog('Bulk Action: Extend Bidding', `Extended bidding by ${action.hours} hour(s) for ${boothIds.length} booths.`);
             }
             return prev.map(b => {
                 if (boothIds.includes(b.id)) {
@@ -462,22 +535,23 @@ export const BiddingProvider: React.FC<{ children: ReactNode }> = ({ children })
                 return b;
             });
         });
-    }, []);
+    }, [addAuditLog]);
 
     const addLocation = useCallback((location: string) => {
         if (location && !locations.includes(location)) {
             setLocations(prev => [...prev, location]);
+            addAuditLog('Location Added', `Added new location: "${location}".`);
         }
-    }, [locations]);
+    }, [locations, addAuditLog]);
 
     const deleteLocation = useCallback((locationToDelete: string) => {
         setLocations(prev => prev.filter(loc => loc !== locationToDelete));
         setBooths(prev => prev.map(b => b.location === locationToDelete ? { ...b, location: '' } : b));
-    }, []);
-
+        addAuditLog('Location Deleted', `Deleted location: "${locationToDelete}".`);
+    }, [addAuditLog]);
 
     return (
-        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, deleteBooth, bulkUpdateBooths, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
+        <BiddingContext.Provider value={{ booths, bids, userBids, notifications, locations, buyoutRequests, watchlist, broadcastHistory, eventStatus, auditLog, setEventStatus, goToEditBooth, setGoToEditBooth, toggleWatchlist, addLocation, deleteLocation, placeBid, removeBid, requestBuyOut, directBuyOut, approveBuyOut, confirmBid, addBooth, updateBooth, archiveBooth, restoreBooth, bulkUpdateBooths, submitPayment, confirmPayment, revokeBid, assignBoothToVendor, unassignBooth, notifyAllVendors }}>
             {children}
         </BiddingContext.Provider>
     );

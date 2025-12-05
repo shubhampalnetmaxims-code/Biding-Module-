@@ -16,7 +16,7 @@ interface VendorBoothDetailPageProps {
 }
 
 export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ booth, vendorName, onBack }) => {
-    const { placeBid, removeBid, userBids, requestBuyOut, buyoutRequests, bids } = useContext(BiddingContext);
+    const { placeBid, removeBid, userBids, requestBuyOut, buyoutRequests, bids, eventStatus } = useContext(BiddingContext);
     const { addToast } = useToast();
 
     const [bidInput, setBidInput] = useState('');
@@ -145,9 +145,21 @@ export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ bo
                 <div className="flex items-center gap-3">
                     <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-2 text-slate-600 font-semibold">
                         <ArrowLeftIcon className="w-5 h-5" />
-                        <span>Back to Bidding Module</span>
+                        <span>Back</span>
                     </button>
                 </div>
+
+                {eventStatus === 'paused' && (
+                     <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 rounded-md" role="alert">
+                        <div className="flex">
+                            <div className="py-1"><InfoIcon className="h-5 w-5 text-amber-500 mr-3" /></div>
+                            <div>
+                                <p className="font-bold">Bidding Temporarily Paused</p>
+                                <p className="text-sm">The event administrator has paused all bidding activity. Please check back later.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Left Section: Details & Actions */}
@@ -215,6 +227,7 @@ export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ bo
                                                 value={selectedCircuits} 
                                                 onChange={(e) => setSelectedCircuits(parseInt(e.target.value, 10))} 
                                                 className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black"
+                                                disabled={eventStatus === 'paused'}
                                             >
                                                 {circuitOptions.map(i => (
                                                     <option key={i} value={i}>{i}</option>
@@ -234,7 +247,7 @@ export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ bo
                                                     </div>
                                                     <div className="relative">
                                                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><DollarSignIcon className="h-5 w-5 text-slate-400" /></div>
-                                                        <input type="number" id={`bid-modal-${booth.id}`} value={bidInput} onChange={(e) => setBidInput(e.target.value)} placeholder={nextMinBid.toFixed(2)} className="w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white" step={booth.increment} min={nextMinBid} />
+                                                        <input type="number" id={`bid-modal-${booth.id}`} value={bidInput} onChange={(e) => setBidInput(e.target.value)} placeholder={nextMinBid.toFixed(2)} className="w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white disabled:bg-slate-100" step={booth.increment} min={nextMinBid} disabled={eventStatus === 'paused'} />
                                                     </div>
                                                 </div>
                                             )
@@ -245,9 +258,9 @@ export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ bo
                                         ) : (
                                             <div className={`mt-3 ${useTwoColumnLayout ? 'grid grid-cols-2 gap-3' : 'grid'}`}>
                                                 {showPlaceBidButton && (
-                                                    <button onClick={handlePlaceBid} disabled={!bidInput} className="w-full bg-slate-700 text-white font-semibold px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed">Place Bid</button>
+                                                    <button onClick={handlePlaceBid} disabled={!bidInput || eventStatus === 'paused'} className="w-full bg-slate-700 text-white font-semibold px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed">Place Bid</button>
                                                 )}
-                                                {showBuyOutButton && <button onClick={handleBuyOut} className="w-full bg-pink-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm">Buy Out</button>}
+                                                {showBuyOutButton && <button onClick={handleBuyOut} className="w-full bg-pink-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-pink-700 transition-colors shadow-sm text-sm disabled:bg-slate-400 disabled:cursor-not-allowed" disabled={eventStatus === 'paused'}>Buy Out</button>}
                                             </div>
                                         )}
                                     </div>
@@ -269,7 +282,7 @@ export const VendorBoothDetailPage: React.FC<VendorBoothDetailPageProps> = ({ bo
                                         <div className="flex justify-between pt-1 border-t border-blue-200 mt-1"><span className="font-bold text-slate-700">Total Bid Value:</span><span className="font-bold text-slate-900">${(userBidDetails.bidAmount + userBidDetails.circuits * 60).toFixed(2)}</span></div>
                                     </div>
                                     {!hasAnyPendingBuyout && (
-                                        <div className="mt-2 pt-2 border-t border-blue-200"><button onClick={handleRemoveBid} className="w-full text-center text-xs font-semibold text-red-600 hover:text-red-800 hover:bg-red-50 py-1 rounded-md transition-colors">Remove My Bid</button></div>
+                                        <div className="mt-2 pt-2 border-t border-blue-200"><button onClick={handleRemoveBid} className="w-full text-center text-xs font-semibold text-red-600 hover:text-red-800 hover:bg-red-50 py-1 rounded-md transition-colors" disabled={eventStatus === 'paused'}>Remove My Bid</button></div>
                                     )}
                                 </div>
                             )}

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { Sidebar } from './Sidebar';
 import { BoothManagement } from './BoothManagement';
 import { BoothDetails } from './BoothDetails';
@@ -11,8 +11,9 @@ import { Booth } from './BoothManagement';
 import { Settings } from './Settings';
 import { VendorManagement } from './VendorManagement';
 import { NotifyVendors } from './NotifyVendors';
+import { AuditLog } from './AuditLog';
 
-export type AdminViewType = 'dashboard' | 'booths' | 'locations' | 'vendorManagement' | 'notify' | 'settings';
+export type AdminViewType = 'dashboard' | 'booths' | 'locations' | 'vendorManagement' | 'notify' | 'settings' | 'auditLog';
 
 interface AdminViewProps {
     isSidebarOpen: boolean;
@@ -22,31 +23,33 @@ interface AdminViewProps {
 export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [activeView, setActiveView] = useState<AdminViewType>('dashboard');
     const [boothViewMode, setBoothViewMode] = useState<'list' | 'details' | 'create' | 'edit'>('list');
-    const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null);
+    const [selectedBoothId, setSelectedBoothId] = useState<number | null>(null);
     const { booths, notifications, addBooth, updateBooth, setGoToEditBooth } = useContext(BiddingContext);
     const adminNotifications = notifications['admin'] || [];
 
+    const selectedBooth = useMemo(() => {
+        if (!selectedBoothId) return null;
+        return booths.find(b => b.id === selectedBoothId) || null;
+    }, [selectedBoothId, booths]);
+
     const handleViewBoothDetails = (boothId: number) => {
-        const booth = booths.find(b => b.id === boothId);
-        if (booth) {
-            setSelectedBooth(booth);
-            setBoothViewMode('details');
-            setActiveView('booths');
-        }
+        setSelectedBoothId(boothId);
+        setBoothViewMode('details');
+        setActiveView('booths');
     };
 
     const handleBackToList = () => {
-        setSelectedBooth(null);
+        setSelectedBoothId(null);
         setBoothViewMode('list');
     };
     
     const handleGoToCreate = () => {
-        setSelectedBooth(null);
+        setSelectedBoothId(null);
         setBoothViewMode('create');
     };
     
     const handleGoToEdit = (booth: Booth) => {
-        setSelectedBooth(booth);
+        setSelectedBoothId(booth.id);
         setBoothViewMode('edit');
         setActiveView('booths'); // Ensure we are on the booths page
     };
@@ -68,7 +71,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSideba
     const handleSidebarItemClick = (view: AdminViewType) => {
         setActiveView(view);
         setBoothViewMode('list'); // Reset to list when changing main view
-        setSelectedBooth(null);
+        setSelectedBoothId(null);
         setIsSidebarOpen(false);
     };
     
@@ -84,6 +87,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ isSidebarOpen, setIsSideba
                 return <NotifyVendors />;
             case 'settings':
                 return <Settings />;
+            case 'auditLog':
+                return <AuditLog />;
             case 'booths':
                 switch (boothViewMode) {
                     case 'list':

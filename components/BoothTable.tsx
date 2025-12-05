@@ -8,10 +8,12 @@ interface BoothTableProps {
     booths: Booth[];
     onEdit: (booth: Booth) => void;
     onDelete: (boothId: number) => void;
+    onRestore: (boothId: number) => void;
     onViewDetails: (boothId: number) => void;
     selectedBooths: number[];
     onSelectAll: () => void;
     onSelectOne: (boothId: number) => void;
+    isArchivedView?: boolean;
 }
 
 const getStatusBadgeClass = (status: Booth['status']) => {
@@ -40,11 +42,12 @@ const formatDate = (dateString: string) => {
     }
 };
 
-export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete, onViewDetails, selectedBooths, onSelectAll, onSelectOne }) => {
+export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete, onRestore, onViewDetails, selectedBooths, onSelectAll, onSelectOne, isArchivedView = false }) => {
     const { buyoutRequests } = useContext(BiddingContext);
     
     const getRowClass = (booth: Booth, isSelected: boolean) => {
         if (isSelected) return 'bg-pink-50 hover:bg-pink-100';
+        if (isArchivedView) return 'bg-slate-50/50 hover:bg-slate-100';
 
         const hasPendingBuyout = (buyoutRequests[booth.id] || []).length > 0;
         if (hasPendingBuyout) return 'bg-yellow-50 hover:bg-yellow-100';
@@ -71,6 +74,7 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                                 checked={booths.length > 0 && selectedBooths.length === booths.length}
                                 onChange={onSelectAll}
                                 aria-label="Select all booths"
+                                disabled={isArchivedView}
                            />
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Booth Title</th>
@@ -97,6 +101,7 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                                         checked={isSelected}
                                         onChange={() => onSelectOne(booth.id)}
                                         aria-label={`Select booth ${booth.title}`}
+                                        disabled={isArchivedView}
                                     />
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
@@ -122,14 +127,20 @@ export const BoothTable: React.FC<BoothTableProps> = ({ booths, onEdit, onDelete
                                     {booth.status === 'Open' ? <CountdownTimer endDate={booth.bidEndDate}/> : formatDate(booth.bidEndDate)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex items-center justify-end gap-3">
-                                        <button onClick={() => onEdit(booth)} className="text-slate-500 hover:text-pink-600 transition-colors" aria-label="Edit Booth">
-                                            <EditIcon className="w-4 h-4" />
+                                    {isArchivedView ? (
+                                        <button onClick={() => onRestore(booth.id)} className="font-semibold text-green-600 hover:text-green-800 transition-colors">
+                                            Unarchive
                                         </button>
-                                        <button onClick={() => onDelete(booth.id)} className="text-slate-500 hover:text-red-600 transition-colors" aria-label="Delete Booth">
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
+                                    ) : (
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button onClick={() => onEdit(booth)} className="text-slate-500 hover:text-pink-600 transition-colors" aria-label="Edit Booth">
+                                                <EditIcon className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => onDelete(booth.id)} className="text-slate-500 hover:text-red-600 transition-colors" aria-label="Delete Booth">
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         )

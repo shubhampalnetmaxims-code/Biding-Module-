@@ -1,8 +1,11 @@
-
 import React from 'react';
-import { LocationPinIcon, CalendarIcon, MapIcon, MoreHorizontalIcon, ChevronDownIcon } from './icons';
+import { LocationPinIcon, CalendarIcon, MapIcon, MoreHorizontalIcon, ChevronDownIcon, BellIcon } from './icons';
 
-export const EventHeader: React.FC = () => {
+interface EventHeaderProps {
+  onOpenNotifications?: () => void;
+}
+
+export const EventHeader: React.FC<EventHeaderProps> = ({ onOpenNotifications }) => {
   return (
     <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
       <div className="flex items-center gap-4">

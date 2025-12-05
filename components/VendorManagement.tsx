@@ -71,6 +71,7 @@ export const VendorManagement: React.FC = () => {
 
     const [selectedBoothId, setSelectedBoothId] = useState('');
     const [selectedVendor, setSelectedVendor] = useState('Vendor 1');
+    const [negotiatedPrice, setNegotiatedPrice] = useState('');
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
     const [viewingVendor, setViewingVendor] = useState<string | null>(null);
     const [viewingBooth, setViewingBooth] = useState<Booth | null>(null);
@@ -84,8 +85,13 @@ export const VendorManagement: React.FC = () => {
     }, [booths]);
 
     const handleAssign = () => {
+        const price = parseFloat(negotiatedPrice);
         if (!selectedBoothId || !selectedVendor) {
             addToast('Please select both a booth and a vendor.', 'error');
+            return;
+        }
+        if (isNaN(price) || price <= 0) {
+            addToast('Please enter a valid negotiated price.', 'error');
             return;
         }
 
@@ -95,11 +101,12 @@ export const VendorManagement: React.FC = () => {
         setConfirmModalState({
             isOpen: true,
             title: 'Confirm Assignment',
-            message: `Are you sure you want to assign "${booth.title}" to ${selectedVendor}? This will mark the booth as sold and notify any existing bidders.`,
+            message: `Are you sure you want to assign "${booth.title}" to ${selectedVendor} for $${price.toFixed(2)}? This will mark the booth as sold.`,
             onConfirm: () => {
-                assignBoothToVendor(parseInt(selectedBoothId), selectedVendor);
+                assignBoothToVendor(parseInt(selectedBoothId), selectedVendor, price);
                 addToast(`Booth assigned successfully to ${selectedVendor}.`, 'success');
                 setSelectedBoothId('');
+                setNegotiatedPrice('');
                 setConfirmModalState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
             }
         });
@@ -130,41 +137,29 @@ export const VendorManagement: React.FC = () => {
             {/* Section 1: Assign a Booth */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="text-xl font-bold text-slate-800 mb-4">Assign a Booth</h3>
-                <div className="flex flex-col sm:flex-row items-end gap-4">
-                    <div className="w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 items-end gap-4">
+                    <div className="lg:col-span-1">
                         <label htmlFor="booth-select" className="block text-sm font-medium text-slate-700 mb-1">Select Booth</label>
-                        <select
-                            id="booth-select"
-                            value={selectedBoothId}
-                            onChange={(e) => setSelectedBoothId(e.target.value)}
-                            className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black"
-                        >
+                        <select id="booth-select" value={selectedBoothId} onChange={(e) => setSelectedBoothId(e.target.value)} className="w-full rounded-md border-slate-300">
                             <option value="">-- Choose a booth --</option>
-                            {unassignedBooths.map(booth => (
-                                <option key={booth.id} value={booth.id}>{booth.title} ({booth.location})</option>
-                            ))}
+                            {unassignedBooths.map(booth => <option key={booth.id} value={booth.id}>{booth.title}</option>)}
                         </select>
                     </div>
-                    <div className="w-full">
+                     <div className="lg:col-span-1">
                         <label htmlFor="vendor-select" className="block text-sm font-medium text-slate-700 mb-1">Assign to Vendor</label>
-                        <select
-                            id="vendor-select"
-                            value={selectedVendor}
-                            onChange={(e) => setSelectedVendor(e.target.value)}
-                            className="w-full rounded-md border border-slate-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 px-3 py-2 bg-white text-black"
-                        >
-                            {VENDORS.map(vendor => (
-                                <option key={vendor} value={vendor}>{vendor}</option>
-                            ))}
+                        <select id="vendor-select" value={selectedVendor} onChange={(e) => setSelectedVendor(e.target.value)} className="w-full rounded-md border-slate-300">
+                            {VENDORS.map(vendor => <option key={vendor} value={vendor}>{vendor}</option>)}
                         </select>
                     </div>
-                    <button
-                        onClick={handleAssign}
-                        disabled={!selectedBoothId || !selectedVendor}
-                        className="w-full sm:w-auto flex-shrink-0 bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed"
-                    >
-                        Assign Booth
-                    </button>
+                    <div className="lg:col-span-1">
+                        <label htmlFor="negotiated-price" className="block text-sm font-medium text-slate-700 mb-1">Negotiated Price ($)</label>
+                        <input type="number" id="negotiated-price" value={negotiatedPrice} onChange={(e) => setNegotiatedPrice(e.target.value)} placeholder="e.g., 500.00" className="w-full rounded-md border-slate-300"/>
+                    </div>
+                    <div className="lg:col-span-1">
+                        <button onClick={handleAssign} disabled={!selectedBoothId || !selectedVendor || !negotiatedPrice} className="w-full bg-pink-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-pink-700 shadow-sm disabled:bg-slate-400">
+                            Assign Booth
+                        </button>
+                    </div>
                 </div>
                 {unassignedBooths.length === 0 && (
                      <p className="text-sm text-slate-500 mt-4">
